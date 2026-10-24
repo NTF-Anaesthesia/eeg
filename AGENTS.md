@@ -1,27 +1,36 @@
-# <app>
+# eeg
 
 Instructions for every AI assistant working here (Claude Code reads this through `CLAUDE.md`).
-<One or two lines: what the app is, who it is for, where it is live, how it is deployed.>
+The Processed EEG (BIS to DSA) simulator: a teaching page showing how anaesthetic depth changes processed-EEG monitors,
+for anaesthesia residents. Live at https://eeg.anantf.com (unlisted); `eeg/` is the app, `bis/` forwards the old BIS
+address. Served by this repo's own Cloudflare Worker (`eeg`). Split out of the NTF anaesthesia site repo on 24 Oct 2026;
+`anantf.com/eeg/` and `anantf.com/bis/` forward here.
 
 ## Public here, private elsewhere
 
 Anything merged here is public. Keep only code, docs, general rules and **made-up** sample data. Never commit
 secrets, tokens, personal data, real names or patient details. Private notes belong in this repo's private pair
-(`<app>-private`, in the same organisation) and the shared notes repo; never copy anything from there into this repo,
+(`eeg-private`, in the same organisation) and the shared notes repo; never copy anything from there into this repo,
 a PR or an issue (neutral pointers like "ask the owner" are fine).
 
 ## Rules that bite
 
 - All patients are synthetic; this is teaching software, never clinical advice.
-- Read `NOTES.md` and `STATUS.md` before changing the app.
-- Relative paths inside the app; links to other NTF pages are absolute, e.g. https://anantf.com/.
+- Read `eeg/NOTES.md` and `eeg/STATUS.md` before changing the app.
+- Relative paths inside `eeg/` (served at the root of eeg.anantf.com and at `/eeg/`); links to other NTF pages are
+  absolute, e.g. https://anantf.com/. The page keeps its own copy of the site chrome in `eeg/assets/` and the site fonts.
 - Installable web apps cancel the browser's automatic install prompt: add
   `<script>addEventListener('beforeinstallprompt', e => e.preventDefault());</script>` to the `<head>` of every page
   that links a manifest. Keep the manifest, icons and service worker: installable, never prompted. No install buttons.
 
 ## Checks before merging
 
-List the repo's check commands here (for example `node tools/check.mjs`) and keep `.github/workflows/checks.yml` in step.
+```
+node tools/check.mjs              # repo checks + Worker tests
+node eeg/test/engine.check.mjs    # BIS engine tuning
+```
+Browser suites (`eeg/test/*.e2e.mjs`, listed in `.github/workflows/checks.yml`) need a static server in the repo root:
+`python3 -m http.server 8080`, then e.g. `node eeg/test/layout.e2e.mjs`.
 
 ## Working with the maintainers
 
