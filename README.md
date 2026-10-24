@@ -1,18 +1,13 @@
-# ntf-public-template
+# eeg
 
-Starting point for a new public NTF repo (one app or app group). Use **Use this template**, then follow the checklist.
+The Processed EEG (BIS to DSA) simulator: induce and wake a synthetic patient and watch five processed-EEG monitor skins
+respond. For anaesthesia residents. Teaching only: it never gives advice for a real patient, and every patient is synthetic.
 
-## Checklist after creating the repo
+Live at https://eeg.anantf.com (unlisted). Part of the NTF anaesthesia apps (https://anantf.com).
 
-1. Replace `<app>` and the one-line description in `AGENTS.md`, `README.md`, `STATUS.md` and `NOTES.md`.
-2. Create the private pair `<app>-private` from `ntf-private-template` (when the app has notes or data).
-3. Add `wrangler.jsonc` (Worker name, custom domain `<app>.anantf.com`); the organisation secrets are used by `deploy.yml`.
-4. Add the repo to the shared hub's `hub/repo-map.md`.
-5. Delete this checklist from `README.md`.
+- `eeg/`: the app (static site, no build step) with its docs, status notes and tests.
+- `bis/`: forwards the old BIS address (`/bis/`) to the app.
+- `worker/`, `wrangler.jsonc`: the Cloudflare Worker `eeg` that serves `eeg/` at eeg.anantf.com (no preview links).
+- `tools/`: `check.mjs` (repo checks and Worker tests), `vendor/axe.min.js` (accessibility checks used by the tests).
 
-## What is here
-
-- `AGENTS.md`: rules for every assistant; `CLAUDE.md` points to it.
-- `.claude/settings.json` and `.claude/hooks/attach-notes.sh`: cloud sessions are told to attach the shared private notes repo first.
-- `.github/workflows/`: `checks.yml` (pull requests and main) and `deploy.yml` (Worker, organisation secrets, no Workers Builds).
-- `STATUS.md` and `NOTES.md`: current state and lasting decisions.
+Checks: `node tools/check.mjs`, `node eeg/test/engine.check.mjs`, and the browser suites listed in `.github/workflows/checks.yml`.
