@@ -100,7 +100,10 @@ function profile(p,f,spEnv,spF,kg,ks,wa){
 // EEG over a minute or two (the DSA 'unzips' from one pattern to the next) instead of at once. Real propofol and sevoflurane
 // effect-site half-times are about 2-3 min. Induction is a bolus and quick (12 s here); emergence is slow (120 s here, so a
 // patient takes a few minutes to wake and the DSA unzips back); speed 4x or 10x shortens both.
-const TAU_UP=12,TAU_DOWN=120;
+// Fast-forward (owner, 30 Oct 2026): at speed above 1x the rise uses a real induction's pace (60 s, about 3 min to settle),
+// so the sped-up DSA shows the induction as a gradual slope over minutes, not a step.
+const TAU_UP=12,TAU_UP_FF=60,TAU_DOWN=120;
+const tauUp=()=>speed>1?TAU_UP_FF:TAU_UP;
 // case length (owner, 14 Oct 2026): the effect site empties more slowly after a long case, drug by drug (context-sensitive half-time).
 // Time constant = TAU_DOWN x (1 + (L-1) x CSENS): L 1 short, 2.5 medium, 5 long; remifentanil and N2O do not accumulate.
 const CASEL={short:1,medium:2.5,long:5},CSENS={propofol:0.9,sevo:0.5,ketamine:0.4,dex:0.9,remi:0,n2o:0};
@@ -134,7 +137,7 @@ class Engine{
  stimulus(kind){this.stT=100;this.stK=kind??(Math.random()<0.1?'delta':'');}
  sample(){ // one sample at FS
   const dt=1/FS; this.t+=dt;
-  const m=this.mods,de=this.de,au=dt/TAU_UP;
+  const m=this.mods,de=this.de,au=dt/tauUp();
   if(typeof de==='number')this.de+=(this.d-de)*(this.d>de?au:dt/tauDown(this.drug,m));else for(const q in MIX0){const t=this.d[q]||0;de[q]+=(t-de[q])*(t>de[q]?au:dt/tauDown(q,m));}
   this.updNmb();
   const tg=target(this.drug,this.de,m); const k=dt/8; // ~8 s time constant: the spectrum glides to the effect-site state
