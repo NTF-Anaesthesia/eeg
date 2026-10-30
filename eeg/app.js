@@ -88,7 +88,7 @@ function target(drug,d,mods){mods=mods||{};
  return p;
 }
 // forced-air warmer: broadband 30-47 Hz pickup (Hemmerling & Fortier 2002); Engine.wa is its amplitude (power wa²)
-const WARM=6;
+const WARM=6,AMP_EVERY=8;
 function profile(p,f,spEnv,spF,kg,ks,wa){
  const g=(c,w)=>Math.exp(-((f-c)**2)/(2*w*w));
  let P=p.bg/(0.6+f)*3+p.ar*g(18,4)+(wa?wa*wa*WARM*cl((f-28)/4):0);
@@ -119,9 +119,9 @@ function inducedDepth(drug,d){
 class Engine{
  constructor(){this.ph=OSC_F.map(()=>Math.random()*6.283);this.m=OSC_F.map(()=>1);this.p=target('propofol',0);
   this.t=0;this.spT=1;this.spOn=false;this.spD=1;this.spF=12;this.kT=3;this.kPh=0;this.kg=1;this.ks=1;this.bsState=0;this.bsTimer=1;this.gate=1;this.drug='propofol';this.d=0;this.mods={};this.diT=0;this.diOn=false;this.nmbT=0;this.nmbS=0;this.tone=1;this.diAcc=0;this.artAcc=0;this.tail=0;this.tailV=0;
-  this.wa=0;this.stT=0;this.stK='';this.blT=2;this.blA=0;this.blP=1;this.dr=0;this.eye=0;this.eyeK=0;this.de=0;this.nmbOn=false;}
+  this.wa=0;this.stT=0;this.stK='';this.blT=2;this.blA=0;this.blP=1;this.dr=0;this.eye=0;this.eyeK=0;this.de=0;this.nmbOn=false;this.amp=new Float64Array(OSC_F.length);this.ampN=0;}
  setTarget(drug,d,mods){if(drug!==this.drug||typeof d!==typeof this.d||this.de===0&&!this.deSet)this.de=cloneD(d);this.deSet=true;this.drug=drug;this.d=d;this.mods=mods||{};}
- snap(){this.de=cloneD(this.d);this.updNmb();this.p=target(this.drug,this.de,this.mods);this.wa=this.mods.warmer?1:0;this.eyeK=this.eyeT(this.p,this.mods.nmbK??(this.mods.nmb?1:0));} // jump instantly
+ snap(){this.de=cloneD(this.d);this.updNmb();this.p=target(this.drug,this.de,this.mods);this.wa=this.mods.warmer?1:0;this.eyeK=this.eyeT(this.p,this.mods.nmbK??(this.mods.nmb?1:0));this.ampN=0;} // jump instantly
  // muscle relaxant given at induction (nmbMode 'auto'), always ('on') or never ('off'); sets mods.nmb, which target() reads.
  // Only when the page set a mode: the Node checks drive mods.nmb directly.
  updNmb(){const m=this.mods;if(!m.nmbMode||m.nmbK!==undefined)return; // the page's block model (nm) sets nmbK for the live engine
@@ -167,11 +167,14 @@ class Engine{
    else if(this.bsState===0&&Math.random()<b){this.bsState=1;this.bsTimer=10**(2*Math.max(0,b-0.5))*(1+2*Math.random());}
    else{this.bsState=0;this.bsTimer=0.5+2.5*Math.random();}}
   const gTarget=this.bsState?0.03:1; this.gate+=(gTarget-this.gate)*0.08;
+  // oscillator amplitudes from the spectral profile: the profile glides over seconds, so it is refreshed every AMP_EVERY
+  // samples (16 Hz) instead of every sample, which was most of the page's CPU
+  if(--this.ampN<=0){this.ampN=AMP_EVERY;for(let i=0;i<OSC_F.length;i++)this.amp[i]=Math.sqrt(2*profile(this.p,OSC_F[i],spEnv,this.spF,this.kg,this.ks,this.wa));}
   let x=0;
   for(let i=0;i<OSC_F.length;i++){const f=OSC_F[i];
    this.m[i]+= (1-this.m[i])*0.004+(Math.random()-0.5)*0.104; if(this.m[i]<0.05)this.m[i]=0.05;
    this.ph[i]+=6.2832*f*dt+(Math.random()-0.5)*0.277;
-   const P=profile(this.p,f,spEnv,this.spF,this.kg,this.ks,this.wa); x+=Math.sqrt(2*P)*this.m[i]*Math.sin(this.ph[i]);
+   x+=this.amp[i]*this.m[i]*Math.sin(this.ph[i]);
   }
   const emgNoise=this.p.emg>0?randn()*Math.sqrt(this.p.emg)*1.2:0;
   let y=x*this.gate+emgNoise+randn()*0.6;
@@ -810,4 +813,7 @@ setDrug('propofol');snapAll();step(300*FS);stepR(300*FS);simT=300;warming=false;
 if(reduced){exT=T[5]-0.01;}
 addEventListener('resize',()=>{dirty=true;LIB.forEach(x=>x.cols&&drawStrip($('lib-'+x.id),x.cols));qa&&drawStrip($('cQuiz'),qa.cols);});
 requestAnimationFrame(frame);
-setTimeout(()=>{buildLib();newQ();},50);
+// the library and quiz strips are simulated only when their section first nears the screen
+(()=>{const go=()=>{if(go.done)return;go.done=1;buildLib();newQ();},el=$('lib');
+ if(!el||!('IntersectionObserver' in window)){setTimeout(go,50);return;}
+ const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){io.disconnect();go();}},{rootMargin:'600px'});io.observe(el);if($('cQuiz'))io.observe($('cQuiz'));})();
