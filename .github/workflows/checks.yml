@@ -44,6 +44,7 @@ jobs:
           - { name: EEG workshop (quiz), cmd: "node eeg/test/workshop-quiz.e2e.mjs" }
           - { name: EEG workshop (real-time EEG), cmd: "node eeg/test/workshop-realtime.e2e.mjs" }
           - { name: EEG workshop page (/workshop/), cmd: "node eeg/test/workshop-page.e2e.mjs" }
+          - { name: EEG playback speed, cmd: "node eeg/test/speed.e2e.mjs" }
     name: browser (${{ matrix.name }})
     steps:
       - uses: actions/checkout@v4

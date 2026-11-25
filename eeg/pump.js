@@ -202,14 +202,17 @@ const ptIn=()=>{const n=(id,lo,hi,d)=>{const v=+$(id).value;return v>=lo&&v<=hi?
  PUMP.pt={sex:$('pSex').value,age:n('pAge',18,90,PUMP.pt.age),height:n('pHt',140,210,PUMP.pt.height),weight:n('pWt',40,160,PUMP.pt.weight)};pumpModes();};
 for(const id of ['pSex','pAge','pHt','pWt'])$(id).addEventListener('change',()=>{ptIn();pumpUI();});
 $('pReset').onclick=()=>pumpStart();
-$('pTgt').addEventListener('input',e=>{stopStory();pumpSet({target:+e.target.value});});
-$('pSevo').addEventListener('input',e=>{stopStory();pumpSet({sevoEt:+e.target.value});});
+// a manual change ends any case or demo and clears its caption, so an old Induce or Emerge caption never sits beside a new
+// target (owner, 25 Nov 2026: "Emergence: drug targets are zero" stayed up at a 6.3 µg/ml target)
+const pumpManual=()=>{stopStory();$('storyCap').textContent='';},pumpAddOn=()=>{if(!story)$('storyCap').textContent='';};
+$('pTgt').addEventListener('input',e=>{pumpManual();pumpSet({target:+e.target.value});});
+$('pSevo').addEventListener('input',e=>{pumpManual();pumpSet({sevoEt:+e.target.value});});
 // the add-on lines can be used during a case without stopping it (giving ketamine or dex on top of the case's propofol)
-$('pKetInf').addEventListener('input',e=>pumpSet({ketInf:+e.target.value}));
-$('pDexInf').addEventListener('input',e=>pumpSet({dexInf:+e.target.value}));
-$('pKetGive').onclick=()=>{const v=+$('pKetBol').value;if(v>0&&v<=2)pumpSet({ketBolus:v});pumpRead();};
-$('pDexGive').onclick=()=>{const v=+$('pDexLoad').value;if(v>0&&v<=2)pumpSet({dexLoad:v});pumpRead();};
-$('pRemi').addEventListener('input',e=>{stopStory();pumpSet({remi:+e.target.value});});
+$('pKetInf').addEventListener('input',e=>{pumpAddOn();pumpSet({ketInf:+e.target.value});});
+$('pDexInf').addEventListener('input',e=>{pumpAddOn();pumpSet({dexInf:+e.target.value});});
+$('pKetGive').onclick=()=>{pumpAddOn();const v=+$('pKetBol').value;if(v>0&&v<=2)pumpSet({ketBolus:v});pumpRead();};
+$('pDexGive').onclick=()=>{pumpAddOn();const v=+$('pDexLoad').value;if(v>0&&v<=2)pumpSet({dexLoad:v});pumpRead();};
+$('pRemi').addEventListener('input',e=>{pumpManual();pumpSet({remi:+e.target.value});});
 // Emerge: every pump target to zero; the predicted levels then fall by the model (propofol) and the engine's lag (the rest)
 $('wakeBtn').addEventListener('click',()=>{if(PUMP.on){PUMP.k.left=PUMP.x.left=0;pumpSet({target:0,sevoEt:0,remi:0,ketInf:0,dexInf:0});}});
 // any other agent, a preset combination or a lesson turns the pump off

@@ -22,6 +22,11 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Playback speed scales every induction (25 Nov 2026; `docs/engine-and-wording.md`, `docs/workshop.md`): the owner's "9x
+  doesn't speed up the induction". Induce without the pump was only about 3.4x faster at 9x (a 30 Oct 2026 rule slowed the
+  engine's rise above 1x); now all lags are in sim time. The pump already scaled; its slow onset is Eleveld's ke0, as in the
+  anantf-site emulator. A manual pump change clears an old Induce or Emerge caption. Engine sensitivity (heavy suppression by
+  Ce 6.3 µg/ml at any age): ask the owner.
 - Workshop page uses the BIS Advance, NUHS page style, bigger header and font, neutral quiz names (25 Nov 2026;
   `docs/workshop.md`): the owner's change the same day; the generic monitor is gone. Quiz case menu shows Case A-D until the
   reveal; added-drug event lines say "Drug given.".

@@ -45,7 +45,19 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 - Induce sets Ce 3.5; Emerge sets every target to zero (propofol then falls by the model). Choosing another agent or a
   combination turns the pump off; manual depth works as before. The timeline saves and restores the pump; drug marks on the
   bar follow pump settings, not every step.
-- Test: `test/workshop-pump.e2e.mjs`.
+- Speed (25 Nov 2026, the owner's "9x doesn't speed up the induction"): the pump steps in sim time, so it already scaled
+  (time to BIS < 60 after a Ce 6 µg/ml target: 116 s at 1x, 13 s wall at 9x). What feels slow is Eleveld's own effect site
+  (arterial ke0 0.146/min, t1/2 about 4.7 min): in Ce mode the pump overshoots the plasma (a target of 6.3 in a 40-year-old,
+  170 cm, 70 kg man gives 264 mg over 130 s and a Cp peak near 24 µg/ml, inside the 4x cap) and Ce still takes about 4 min to
+  reach the target. These numbers match the anantf-site emulator's `simulate` for the same patient. After the target goes to
+  zero, Cp falls fast and Ce slowly, also as in that model.
+- Engine sensitivity: the pump's Ce enters the engine at depth 0.155 per µg/ml, the same scale as the main page; the patient's
+  age changes only the PK, not the EEG. Suppression starts near Ce 5.2 µg/ml (depth 0.8) and is heavy by 6.3 (depth 0.98),
+  whatever the pump patient's age. Possible in a young adult at that level, but on the sensitive side; left as it is (it is the engine's tuned
+  scale, `test/engine.check.mjs`). Clinical read-through: ask the owner.
+- A manual pump change (target, sevoflurane, remifentanil; and the add-on lines when no case runs) clears the caption, so an
+  old Induce or Emerge caption never sits beside a new target.
+- Test: `test/workshop-pump.e2e.mjs`; speed and captions: `test/speed.e2e.mjs`.
 
 ## Case files (`cases.js`, `?case=<id>`)
 
