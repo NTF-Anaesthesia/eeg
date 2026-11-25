@@ -163,3 +163,22 @@ to run it with iPads for the participants").
   The slider drag is a mouse drag: Playwright cannot replay a real iOS finger drag on a range input.
   `test/workshop-page.e2e.mjs` checks the manifest, that the worker controls `/workshop/` but not the main page, and that
   the page and a `?case=` link load offline.
+
+## Speed keys (25 Nov 2026)
+
+- The owner found the speed slider did nothing on /workshop/: the main page's speed popover (`demo.js`) opened above the
+  dock, which scrolls in the side column and clipped it, so taps never reached the slider. He asked for keys instead ("It
+  should increase the speed of everything, except of course the EEG itself. I don't need a slider that is so precise, it
+  can just be like six buttons").
+- `ws-page.js` puts a row of six keys under the pause and clock row: 1x 3x 5x 10x 30x 60x (`aria-pressed`, 44 px), calling
+  `setSpeed`; the popover is hidden on this page only (the main page keeps its slider). Cases start at 5x.
+- Speed is the sim clock: engine, DSA, index, SEF, trends, pump and PK, Induce and Emerge, the case script, the timeline
+  clock and quiz checkpoints all run on it; the raw EEG sweeps at real time. Quiz checkpoints are now checked every frame
+  (`quiz.js`), so at 60x a question opens within about a sim second of its time.
+- 60x on an iPad-class CPU: in Chromium with a 4x CPU throttle the sim clock holds 60x (60.1-60.3x); frames drop to about
+  27-33 per second (p95 33-67 ms, a rare 117 ms frame, over the 100 ms step cap). At 6x throttle it still runs at 55-57x.
+- Measured (wall time to BIS under 60, held 10 sim s; 1x / 10x / 60x): Induce (pump to 3.5) 136-139 s / 14.2-14.4 s /
+  2.5-2.6 s; pump target 6 117-121 s / 11.4-11.8 s / 2.0 s.
+- Test: `test/workshop-speed.e2e.mjs` clicks the real keys (layout at iPad and phone sizes, timings, DSA columns per second
+  scale with speed while the raw EEG feed stays at 128 samples a second, 60x under a 4x throttle).
+

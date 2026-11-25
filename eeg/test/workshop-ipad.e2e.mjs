@@ -53,6 +53,10 @@ try{
   await page.evaluate(()=>advCloseMenu());
   await tap(page,'#pModeSeg [data-m="Cp"]');assert.equal(await page.evaluate(()=>PUMP.mode),'Cp',`${tag}: tap Cp`);
   await tap(page,'#pModeSeg [data-m="Ce"]');assert.equal(await page.evaluate(()=>PUMP.mode),'Ce',`${tag}: tap Ce`);
+  // speed keys: a tap sets the sim speed and presses that key only
+  await tap(page,'#speedSeg [data-speed="10"]');assert.equal(await page.evaluate(()=>speed),10,`${tag}: tap 10x`);
+  assert.equal(await page.locator('#speedSeg [aria-pressed=true]').count(),1);
+  await tap(page,'#speedSeg [data-speed="5"]');
   // Alpha dropout: runs the stimulus as an alpha dip; the key shows it running
   await tap(page,'#wsAlpha');assert.ok(await page.evaluate(()=>eng.stT>0&&eng.stK==='alpha'),`${tag}: tap Alpha dropout`);
   assert.equal(await page.locator('#wsAlpha').getAttribute('aria-pressed'),'true');

@@ -77,10 +77,12 @@ startCase=function(id){const ok=startCasePlain(id);if(ok&&qz.on){qzReset(id);set
 function setQuiz(on){qz.on=!!on;qzUI();if(qz.on){if(story?.case)startCase(story.case);}else{qzReset(null);qzUI();}}
 quizBtn.addEventListener('click',()=>setQuiz(!qz.on));
 // checkpoints: pause when the case reaches one (if the timeline jumped past several, ask the latest); summary at the end
-setInterval(()=>{if(!qz.case||qz.open||TL.busy)return;
+// checked every frame, so at 60x a checkpoint fires within about a sim second of its time
+const qzTick=()=>{if(!qz.case||qz.open||TL.busy)return;
  if(!story||story.case!==qz.case){qzSummary();return;}
  const t=simT-story.t0,cps=QUIZ[qz.case]||[];let last=-1;
  cps.forEach((c,i)=>{if(c.at<=t&&!qz.done.has(i)){qz.done.add(i);last=i;}});
- if(last>=0)qzAsk(last);},100);
+ if(last>=0)qzAsk(last);};
+(function qzLoop(){requestAnimationFrame(qzLoop);qzTick();})();
 qCard.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();}});
 if(wsParams.get('quiz')==='1'){qz.on=true;qzUI();if(story?.case){qzReset(story.case);setBlind(true);qzUI();}}
