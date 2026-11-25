@@ -86,7 +86,9 @@ const SEVO_MAC40=1.8,sevoMacAge=age=>SEVO_MAC40*10**(-0.00269*(age-40)); // Nick
 // an add-on line: modal state s, infusion inf (per kg per hour), a bolus or loading dose still running (left, at rate per min),
 // n doses given, total given
 const kdxLine=()=>({s:[0,0,0,0],inf:0,left:0,rate:0,n:0,tot:0,m:null});
-const PUMP={on:false,model:'eleveld',mode:'Ce',pt:{sex:'M',age:40,height:170,weight:70},target:0,sevoEt:0,remi:0,
+// default model Schnider (owner, 25 Nov 2026): Eleveld's slow ke0 (0.146/min) made induction take ~2.4 min to BIS < 60 and
+// emergence ~11 min to BIS 80 after 10 min at Ce 3.5; Schnider (ke0 0.456/min) gives ~75 s and ~4 min. Eleveld stays selectable.
+const PUMP={on:false,model:'schnider',mode:'Ce',pt:{sex:'M',age:40,height:170,weight:70},target:0,sevoEt:0,remi:0,
  s:[0,0,0,0],r:0,kind:'off',acc:0,mg:0,hist:[],m:null,k:kdxLine(),x:kdxLine()};
 const KET_D={v1:0.063,k10:0.4381,k12:0.5921,k13:0.590,k21:0.247,k31:0.0146,ke0:0.5}; // Domino 1984 (per kg), ke0 assumed
 function ketDomino(p){const D=KET_D,v1=D.v1*p.weight,cl2=D.k12*v1,cl3=D.k13*v1;return {v1,v2:cl2/D.k21,v3:cl3/D.k31,cl1:D.k10*v1,cl2,cl3,ke0:D.ke0};}

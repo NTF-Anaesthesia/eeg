@@ -10,9 +10,9 @@
 // relaxant: the page's 'on' mode holds a full block through surgery (no facial EMG); reversal returns to 'off'
 const relax=()=>setNmb('on'),reverse=()=>setNmb('off');
 const CASES={
- tci:{label:'Propofol TCI: induction to emergence',pt:{sex:'M',age:45,height:172,weight:72},model:'eleveld',steps:[
+ tci:{label:'Propofol TCI: induction to emergence',pt:{sex:'M',age:45,height:172,weight:72},model:'schnider',steps:[
   {at:0,pump:{target:0},cap:'Awake baseline before induction. Note the raw EEG, the DSA and SEF95.',ev:'Awake baseline.'},
-  {at:40,pump:{target:4},cap:'Induction: propofol TCI, Eleveld effect-site target 4 µg/ml. The pump runs fast, then the effect site catches up; slow-delta and alpha power build.',ev:'Induction.'},
+  {at:40,pump:{target:4},cap:'Induction: propofol TCI, Schnider effect-site target 4 µg/ml. The pump runs fast, then the effect site catches up; slow-delta and alpha power build.',ev:'Induction.'},
   {at:110,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
   {at:360,pump:{target:3.5},cap:'Maintenance at 3.5 µg/ml: the alpha and slow-delta bands are steady, SEF95 is low.',ev:'Maintenance.'},
   {at:600,stim:'alpha',cap:'Skin incision. Watch the alpha band: it weakens while the hypnotic target is unchanged (alpha dropout).',ev:'Skin incision.'},
@@ -21,7 +21,7 @@ const CASES={
   {at:960,pump:{target:3.5},cap:'Steady maintenance again.',ev:'Maintenance continues.'},
   {at:1080,pump:{target:0,remi:0},act:reverse,cap:'Emergence: pump stopped, relaxant reversed. The alpha band fades and slows, faster activity returns and SEF95 climbs as the effect site falls.',ev:'Anaesthetic stopped; relaxant reversed.'},
   {at:1800,end:true,cap:'Case complete. Drag the timeline back to compare induction, incision and emergence.',ev:'Case complete.'}]},
- sevo:{label:'Sevoflurane: induction to emergence',pt:{sex:'F',age:45,height:162,weight:60},model:'eleveld',steps:[
+ sevo:{label:'Sevoflurane: induction to emergence',pt:{sex:'F',age:45,height:162,weight:60},model:'schnider',steps:[
   {at:0,pump:{target:0},cap:'Awake baseline before induction.',ev:'Awake baseline.'},
   {at:40,pump:{sevoEt:2.4},cap:'Induction with sevoflurane (end-tidal 2.4%, about 1.4 MAC at 45 years). Alpha and slow-delta power build; sevoflurane also adds theta around 5 Hz.',ev:'Induction.'},
   {at:120,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
@@ -32,7 +32,7 @@ const CASES={
   {at:900,pump:{sevoEt:1.8},cap:'Steady maintenance again.',ev:'Maintenance continues.'},
   {at:1020,pump:{sevoEt:0,remi:0},act:reverse,cap:'Emergence: vaporiser off, relaxant reversed. Theta and alpha fade, faster activity returns and SEF95 climbs.',ev:'Anaesthetic stopped; relaxant reversed.'},
   {at:1800,end:true,cap:'Case complete. Drag the timeline back to compare the phases.',ev:'Case complete.'}]},
- propket:{label:'Propofol + ketamine: a high BIS that is not emergence',pt:{sex:'M',age:50,height:175,weight:80},model:'eleveld',steps:[
+ propket:{label:'Propofol + ketamine: a high BIS that is not emergence',pt:{sex:'M',age:50,height:175,weight:80},model:'schnider',steps:[
   {at:0,pump:{target:0},cap:'Awake baseline before induction.',ev:'Awake baseline.'},
   {at:40,pump:{target:4},cap:'Induction: propofol TCI, effect-site target 4 µg/ml.',ev:'Induction.'},
   {at:110,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
@@ -41,7 +41,7 @@ const CASES={
   {at:780,pump:{ketInf:0},cap:'Ketamine infusion stopped: its effect wears off over several minutes and the propofol pattern returns.',ev:'Drug stopped.'},
   {at:1200,pump:{target:0},act:reverse,cap:'Emergence: pump stopped, relaxant reversed.',ev:'Anaesthetic stopped; relaxant reversed.'},
   {at:1800,end:true,cap:'Case complete. Compare the ketamine period with emergence: both raise BIS and SEF95, but the DSA differs.',ev:'Case complete.'}]},
- propdex:{label:'Propofol + dexmedetomidine',pt:{sex:'F',age:60,height:160,weight:65},model:'eleveld',steps:[
+ propdex:{label:'Propofol + dexmedetomidine',pt:{sex:'F',age:60,height:160,weight:65},model:'schnider',steps:[
   {at:0,pump:{target:0},cap:'Awake baseline before induction.',ev:'Awake baseline.'},
   {at:40,pump:{target:3.5},cap:'Induction: propofol TCI, effect-site target 3.5 µg/ml (an older patient).',ev:'Induction.'},
   {at:110,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
