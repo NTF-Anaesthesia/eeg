@@ -136,7 +136,7 @@ body.ws-page{
 .ws-page{touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .ws-page :is(button,select,summary,label,input[type=range],.ws-quiz,#channelChoice,.demo-toolbar,.advwrap){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .ws-page #monitor :is(.panel,.monhead,.ws-strip,.ws-banner) :is(button,select,summary):not(.sr-only),.ws-page .ws-quiz{min-height:44px}
-.ws-page #monitor .pump :is(select,input[type=number]),.ws-page #monitor .pump-mode button,.ws-page #monitor .pump-reset,.ws-page #monitor .pump-give{min-height:44px;font-size:16px}
+.ws-page #monitor .pump :is(select,input[type=number]),.ws-page #monitor .pump-mode button,.ws-page #monitor .pump-reset,.ws-page #monitor .pump-give,.ws-page #monitor .pump-toggle{min-height:44px;font-size:16px}
 .ws-page #monitor .pump-mode button{min-width:52px}
 .ws-page #monitor input[type=number]{font-size:16px}
 .ws-page #monitor .panel input[type=range],.ws-page #playSpeed{height:44px;min-height:44px;touch-action:none}

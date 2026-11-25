@@ -15,7 +15,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 try{
  // ---- 1. page open: empty trend, opioid box on ----
  let page=await open();
- let s=await page.evaluate(()=>({n:advHist('L').length,t0:ADV.t0,simT,box:$('pOpioid').checked,op:PUMP.opioid,mix:mix.opioid}));
+ let s=await page.evaluate(()=>({n:advHist('L').length,t0:ADV.t0,simT,box:$('pOpioid').getAttribute('aria-pressed')==='true',op:PUMP.opioid,mix:mix.opioid}));
  assert.ok(s.n<=5,'trend and DSA start empty on page open: '+s.n+' columns');assert.ok(s.simT-s.t0<6,'trend starts now');
  assert.equal(s.box,true,'Opioid on board ticked by default');assert.equal(s.mix,1,'the pump puts the opioid into the mix');
  // ---- 2. Induce: Ce 6 for laryngoscopy, BIS into the 20s, then 3.5 after 150 s and BIS in the 40s ----
@@ -47,7 +47,7 @@ try{
  await page.context().close();
  // ---- 6. a case: trend empty at its 0 min, opioid box off, deep induction then 4 ----
  page=await open('?case=tci');
- s=await page.evaluate(()=>({t0:ADV.t0,st:story.t0,n:advHist('L').length,op:PUMP.opioid,box:$('pOpioid').checked}));
+ s=await page.evaluate(()=>({t0:ADV.t0,st:story.t0,n:advHist('L').length,op:PUMP.opioid,box:$('pOpioid').getAttribute('aria-pressed')==='true'}));
  assert.ok(Math.abs(s.t0-s.st)<1,'the trend starts at the case start');assert.ok(s.n<=5,'trend and DSA empty at 0 min: '+s.n);
  assert.equal(s.op,false,'the cases run without the background opioid');assert.equal(s.box,false);
  await page.evaluate(()=>{paused=true;tlRun(Math.max(0,story.t0+150-simT));});

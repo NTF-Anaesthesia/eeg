@@ -141,7 +141,7 @@ pumpBox.innerHTML=`<div class="pump-row pump-head"><b>TCI propofol</b>
  <label>cm <input id="pHt" type="number" min="140" max="210" step="1" value="170"></label>
  <label>kg <input id="pWt" type="number" min="40" max="160" step="1" value="70"></label></div>
 <label class="pump-row pump-slider"><span>Target <output id="pTgtV">0.0</output> µg/ml</span><input id="pTgt" type="range" min="0" max="8" step="0.1" value="0"></label>
-<label class="pump-row pump-check"><input id="pOpioid" type="checkbox" checked> Opioid on board <small>(about remifentanil 2 ng/ml or fentanyl 2 µg/kg)</small></label>
+<div class="pump-row pump-check"><button type="button" id="pOpioid" class="pump-toggle" aria-pressed="true">Opioid on board</button><small>about remifentanil 2 ng/ml or fentanyl 2 µg/kg</small></div>
 <p class="pump-read" id="pRead" aria-live="off"></p>
 <canvas id="pChart" class="pump-chart" aria-label="Plasma and effect-site concentration over the last 15 minutes" role="img"></canvas>
 <div class="pump-line" id="pKetLine" role="group" aria-label="Ketamine"><div class="pump-row pump-head"><b>Ketamine</b><span class="pump-ce" id="pKetCe">Ce 0.00 µg/ml</span></div>
@@ -165,7 +165,7 @@ function pumpUI(){pumpBox.hidden=!PUMP.on;workspace.dataset.pump=PUMP.on?'on':'o
  $('pSex').value=PUMP.pt.sex;$('pAge').value=PUMP.pt.age;$('pHt').value=PUMP.pt.height;$('pWt').value=PUMP.pt.weight;
  const started=PUMP.mg>0;for(const id of ['pModel','pSex','pAge','pHt','pWt'])$(id).disabled=started;
  $('pPt').title=started?'Reset the pump to change the patient or model':'';
- $('pOpioid').checked=!!PUMP.opioid;$('pTgt').value=PUMP.target;$('pTgtV').textContent=pf(PUMP.target);
+ $('pOpioid').setAttribute('aria-pressed',String(!!PUMP.opioid));$('pTgt').value=PUMP.target;$('pTgtV').textContent=pf(PUMP.target);
  $('pSevo').value=PUMP.sevoEt;$('pSevoV').textContent=pf(PUMP.sevoEt);$('pMac').textContent=PUMP.sevoEt?`≈ ${(pumpSevoMac()).toFixed(2)} MAC`:'';
  if(PUMP.sevoEt||PUMP.remi)$('pMore').open=true; // a case or the timeline set them: show them
  $('pRemi').value=PUMP.remi;$('pRemiV').textContent=pf(PUMP.remi);
@@ -229,8 +229,8 @@ $('pKetGive').onclick=()=>{pumpAddOn();const el=$('pKetBol'),raw=+el.value,msg=$
 $('pDexGive').onclick=()=>{pumpAddOn();if(PUMP.x.left>1e-9){PUMP.x.left=0;pumpRead();return;} // Stop load
  const v=+$('pDexLoad').value;if(v>0&&v<=2)pumpSet({dexLoad:v});pumpRead();};
 $('pRemi').addEventListener('input',e=>{pumpManual();pumpSet({remi:+e.target.value});});
-// the opioid box can be changed during a case without stopping it, like the add-on lines
-$('pOpioid').addEventListener('change',e=>{pumpAddOn();pumpSet({opioid:e.target.checked});});
+// the opioid key (a toggle, 44 px for iPads) can be changed during a case without stopping it, like the add-on lines
+$('pOpioid').addEventListener('click',()=>{pumpAddOn();pumpSet({opioid:!PUMP.opioid});});
 // Emerge: every pump target to zero; the predicted levels then fall by the model (propofol) and the engine's lag (the rest)
 $('wakeBtn').addEventListener('click',()=>{if(PUMP.on){PUMP.k.left=PUMP.x.left=0;pumpSet({target:0,sevoEt:0,remi:0,ketInf:0,dexInf:0});}});
 // any other agent, a preset combination or a lesson turns the pump off
