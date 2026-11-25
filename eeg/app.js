@@ -283,6 +283,11 @@ const stepR=n=>{swapCh();try{step(n);}finally{swapCh();}};
 const stimAll=kind=>{const k=kind??(Math.random()<0.1?'delta':'');eng.stimulus(k);R.eng.stimulus(k);};
 const snapAll=()=>{eng.snap();R.eng.snap();};
 // monitor settings: smoothing (s), EEG scale (± uV), teaching labels and target band, the info message
+// Blinded mode (workshop, 25 Nov 2026): the numeric index (BIS, and SedLine's PSi) is masked on every screen, with its trend
+// line, index alarms and the page's own BIS hints; the DSA, SEF95/MF and the raw EEG stay. Reveal shows it again until masked.
+// Set by the Blind key or ?blind=1 (workshop.js). The skins call masked() when they draw, never at load.
+const blind={on:false,reveal:false},MASK='••';
+const masked=()=>blind.on&&!blind.reveal,bisV=v=>masked()?null:v;
 const mon={smooth:15,scale:50,sweep:8,dbLo:DB_LO,dbHi:DB_HI,teach:true,info:'',infoUntil:0,skin:'vista',trend:5,bottom:'bis',alo:40,ahi:60};
 function applyTarget(){eng.setTarget(drug,depth,mods);R.eng.setTarget(drug,depth,modsR);describe();if(typeof onTarget==='function')onTarget();}
 
@@ -336,9 +341,9 @@ function monMsg(){const c=COLS[COLS.length-1];if(!c)return null;
  if(isoN>=60)return ['hi','Isoelectric EEG Detected',31,'Isoelectric EEG Detected'];
  if(typeof MT!=='undefined'&&mon.skin==='vista'){
   const low=c.bis!=null&&c.bis<(mon.alo+mon.ahi)/2;
-  if(MT.tgt.active&&outV>=10&&c.bis!=null)return ['hi','BIS Out of Target Range \u2013 '+(low?'Low':'High'),low?29:30,'BIS out of target range'];
+  if(MT.tgt.active&&outV>=10&&c.bis!=null&&!masked())return ['hi','BIS Out of Target Range \u2013 '+(low?'Low':'High'),low?29:30,'BIS out of target range'];
  }else{ const tgtOn=mon.teach,low=c.bis!=null&&c.bis<(mon.alo+mon.ahi)/2;
-   if(tgtOn&&outN>=10&&c.bis!=null)return ['hi','BIS Out of Target Range \u2013 '+(low?'Low':'High'),low?29:30,'BIS out of target range']; }
+   if(tgtOn&&outN>=10&&c.bis!=null&&!masked())return ['hi','BIS Out of Target Range \u2013 '+(low?'Low':'High'),low?29:30,'BIS out of target range']; }
  if(c.sqi<15)return ['lo','Data unavailable due to poor signal quality',28,'Data unavailable due to poor signal quality'];
  if(c.sqi<50)return ['lo','Excessive Artifact Detected in Signal',27,'Excessive Artifact Detected in Signal'];
  if(mon.infoUntil>Date.now())return ['info',mon.info];
@@ -385,7 +390,7 @@ function drawTrend(){if(mon.skin!=='classic')return;const {ctx,w,h}=fit(cTrend);
  ctx.fillStyle=SCR.bis;ctx.fillText('BIS',g.x,10);ctx.fillStyle=EMGC;ctx.textAlign='right';ctx.fillText('EMG',g.x+g.w,10);
  // EMG: thin line; BIS: thick white line that breaks where the number is blanked
  ctx.strokeStyle=EMGC;ctx.lineWidth=1;ctx.beginPath();COLS.forEach((c,i)=>{const y=YE(c.emg);i?ctx.lineTo(X(i),y):ctx.moveTo(X(i),y);});ctx.stroke();
- ctx.strokeStyle=SCR.bis;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.beginPath();let pen=false;COLS.forEach((c,i)=>{if(c.bis==null){pen=false;return;}const y=Y(c.bis);pen?ctx.lineTo(X(i),y):ctx.moveTo(X(i),y);pen=true;});ctx.stroke();
+ ctx.strokeStyle=SCR.bis;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.beginPath();let pen=false;COLS.forEach((c,i)=>{if(bisV(c.bis)==null){pen=false;return;}const y=Y(c.bis);pen?ctx.lineTo(X(i),y):ctx.moveTo(X(i),y);pen=true;});ctx.stroke();
  // artefact bar along the time axis: amber where SQI < 50, yellow where the number was blanked (SQI < 15)
  const bw=g.w/COLMAX+0.5;COLS.forEach((c,i)=>{if(c.sqi>=50)return;ctx.fillStyle=c.sqi<15?'#ffe600':AMBER;ctx.fillRect(X(i)-bw/2,g.y+g.h+1,bw,4);});
  ctx.fillStyle=SCR.mute;ctx.textAlign='left';ctx.fillText(clk(simT-COLMAX),g.x,h-3);ctx.textAlign='right';ctx.fillText(clk(simT),g.x+g.w,h-3);}
@@ -425,11 +430,11 @@ function zoneOf(b){return b>90?'Awake':b>80?'Light/moderate sedation':b>60?'Seda
 function segs(id,n,color){const el=$(id);el.style.setProperty('--seg',color);[...el.children].forEach((x,i)=>x.classList.toggle('on',i<n));}
 const mmss=n=>Math.floor(n/60)+':'+String(n%60).padStart(2,'0');
 function readouts(){const c=COLS[COLS.length-1];if(!c)return;
- if(mon.skin==='advance'){const l=c,r=R.COLS[R.COLS.length-1];if(r){const t=a=>{const x=a.slice(-30);return x.reduce((m,q)=>m+q.tp,0)/Math.max(1,x.length);},pl=Math.pow(10,t(HIST)/10),pr=Math.pow(10,t(R.HIST)/10),as=Math.round(100*Math.abs(pl-pr)/(pl+pr+1e-9)),b=q=>q.sqi<15||q.bis==null?'--':Math.round(q.bis);
+ if(mon.skin==='advance'){const l=c,r=R.COLS[R.COLS.length-1];if(r){const t=a=>{const x=a.slice(-30);return x.reduce((m,q)=>m+q.tp,0)/Math.max(1,x.length);},pl=Math.pow(10,t(HIST)/10),pr=Math.pow(10,t(R.HIST)/10),as=Math.round(100*Math.abs(pl-pr)/(pl+pr+1e-9)),b=q=>q.sqi<15||q.bis==null?'--':masked()?MASK:Math.round(q.bis);
   txt('bilSum',`L: BIS ${b(l)}, SR ${Math.round(l.bsr)}%, SQI ${l.sqi}  ·  R: BIS ${b(r)}, SR ${Math.round(r.bsr)}%, SQI ${r.sqi}  ·  ASYM ${as}%`);}}
  // like the monitor: SQI under 50 shows BIS hollow; under 15 no BIS, SEF, SR, TP or BC at all
- const bl=c.sqi<15,b=$('vBis');b.textContent=bl||c.bis==null?'--':Math.round(c.bis);b.classList.toggle('hollow',!bl&&c.sqi<50);
- const sr=Math.round(c.bsr);txt('vZone',bl?'Poor signal':c.sqi<50?'Low SQI: check':sr>0?`Suppression (SR ${sr}%)`:zoneOf(c.bis));
+ const bl=c.sqi<15,b=$('vBis');b.textContent=bl||c.bis==null?'--':masked()?MASK:Math.round(c.bis);b.classList.toggle('hollow',!bl&&c.sqi<50);
+ const sr=Math.round(c.bsr);txt('vZone',masked()?'Blinded':bl?'Poor signal':c.sqi<50?'Low SQI: check':sr>0?`Suppression (SR ${sr}%)`:zoneOf(c.bis));
  // SQI: 5 bars of 20; EMG: 4 bars, empty under 30 dB, then 30-38, 39-47, 48-55, over 55
  $('vSqi').textContent=c.sqi;segs('sqiSegs',Math.ceil(c.sqi/20),c.sqi<15?'#ff6b6b':c.sqi<50?AMBER:'#5fd08f');
  const e=c.emg;$('vEmg').textContent=Math.round(e);segs('emgSegs',e<30?0:e<39?1:e<48?2:e<56?3:4,e>=48?AMBER:'#5fd08f');
@@ -440,7 +445,7 @@ function readouts(){const c=COLS[COLS.length-1];if(!c)return;
  // the Medtronic screen (mt-screen.js)
  mtReadouts(c,bl,sr,e);
  txt('s2Sqi',String(c.sqi));txt('s2Emg',String(Math.round(e)));txt('s2Sr',bl?'--':String(sr));txt('s2Sef',bl||lastSef==null?'--':lastSef.toFixed(1));txt('s2Tp',bl?'--':String(Math.round(c.tp)));txt('s2Bc',c.bsr<5||c.sqi<50?'--':String(c.bc));
- txt('s2Zone',bl?'Poor signal':c.sqi<50?'Low SQI: check':sr>0?`Suppression (SR ${sr}%)`:zoneOf(c.bis));txt('s2Sup',mmss(tim.sup));txt('s2Low',mmss(tim.low));
+ txt('s2Zone',masked()?'Blinded':bl?'Poor signal':c.sqi<50?'Low SQI: check':sr>0?`Suppression (SR ${sr}%)`:zoneOf(c.bis));txt('s2Sup',mmss(tim.sup));txt('s2Low',mmss(tim.low));
 
  // message region: change the text only when it changes (aria-live)
  const m=monMsg(),mt=m?m[1]:'',el=$('vMsg');if(el.textContent!==mt){el.textContent=mt;el.className='msg'+(m?' '+m[0]:'');}}
@@ -476,6 +481,7 @@ function describe(){const d=typeof eng.de==='number'?eng.de:0;let n,t;
  if(eng.stT>0){const dh=drug==='mix'?mixTarget(Object.assign({},MIX0,eng.de)).dH:eng.de,bl=drug==='mix'&&eng.de.remi>=4;
   t+=' Surgical stimulus in this example: '+(bl?'remifentanil blunts the response, so the EEG barely changes.':(eng.stK==='beta'||eng.stK!=='alpha'&&eng.stK!=='delta'&&dh<0.5)?'in a light patient, beta (around 18 Hz) and facial EMG rise and BIS jumps 10–20 points. An opioid blunts this.':eng.stK==='delta'?'a paradoxical delta arousal: slow power rises and BIS falls, but this is arousal, not deeper anaesthesia. Interpret with the stimulus, drug delivery and haemodynamics.':'the alpha band dips by about 3 dB for a minute or two (an alpha dropout), which can accompany noxious stimulation. It does not by itself establish pain or awareness. Check timing, drug delivery, signal quality and haemodynamics (Hight 2019).');}
  if(typeof learningObservation==='function')t=learningObservation(t);
+ if(masked()){n='Blinded';t='The index is masked. Judge the depth from the DSA, the SEF95 line and the raw EEG, then tap Reveal to check the number and this note.';}
  if($('rName').textContent!==n)$('rName').textContent=n;if($('rText').textContent!==t)$('rText').textContent=t;}
 
 function describeMix(m,tg){tg=tg||m;const hyp=0.155*m.propofol+sevoDepth(m.sevo),parts=[];let n;
@@ -510,7 +516,7 @@ document.querySelectorAll('#drugSeg button').forEach(b=>b.onclick=()=>{stopStory
 // the 21-point table when it is ready, otherwise a forecast, throttled); it fades a moment after the last move
 let popT=0,popDown=false,popFc=0,popBusy=0;
 function popBis(d){if(zonePts&&zoneOK===zoneKeyNow()){const x=cl(d)*20,j=Math.min(19,Math.floor(x));return zonePts[j]+(zonePts[j+1]-zonePts[j])*(x-j);}return null;}
-function showPop(){const d=$('depth').value/100,el=$('tgtPop');let b=popBis(d);
+function showPop(){const d=$('depth').value/100,el=$('tgtPop');if(masked()){el.hidden=true;return;}let b=popBis(d);
  if(b==null&&!popBusy){popBusy=1;setTimeout(()=>{popBusy=0;popFc=forecastBis(drug,$('depth').value/100,mods);showPop();},120);}
  if(b==null)b=popFc;
  el.hidden=false;el.style.left=`clamp(34px, calc(8px + ${d} * (100% - 16px)), calc(100% - 34px))`;
@@ -573,15 +579,15 @@ function zoneChunk(zr,i,pts){if(zr!==zoneRun)return;pts.push(forecastBis(drug,i/
  if(i===16)zoneBand(pts);
  if(i<20){setTimeout(()=>zoneChunk(zr,i+1,pts),40);return;} // 0.85-1.0 too (longer runs where suppression is expected), for the drag bubble
  zonePts=pts;zoneOK=zoneKeyNow();}
-function zoneBand(pts){
+function zoneBand(pts){zoneBand.pts=pts;
  const cross=v=>{for(let j=0;j<pts.length;j++)if(pts[j]<=v)return j?(j-1+(pts[j-1]-v)/(pts[j-1]-pts[j]))/20:0;return null;};
  const lo=cross(60),hi=cross(40),h=hi==null?1:hi,band=$('zoneBand');
- const ok=lo!=null&&h>lo;band.hidden=!ok;$('zoneNote').hidden=false;
+ const ok=lo!=null&&h>lo;band.hidden=!ok||masked();$('zoneNote').hidden=masked();
  if(ok){band.style.left=`calc(8px + ${lo} * (100% - 16px))`;band.style.width=`calc(${h-lo} * (100% - 16px))`;}
  $('zoneText').textContent=ok?'Green band: depths that settle at BIS 40–60 (steady state)':'No depth of this drug alone settles at BIS 40–60';}
 function fcUI(){const b=fc.bis==null?'--':Math.round(fc.bis),el=drug==='mix'?['tgtMix','tgtMixSub']:['tgtBis','tgtSub'];
  const g=eng.gap(),sub=g>0.03?(drug==='mix'?' · drugs settling at the effect site':' · effect site '+Math.round(eng.de*100)+' → '+Math.round(depth*100)+', settling'):' · effect site at target';
- const bt=$(el[0]).firstChild,st=$(el[1]);const tx='Model BIS ≈ '+b;if(bt.textContent!==tx)bt.textContent=tx;if(st.textContent!==sub)st.textContent=sub;}
+ const bt=$(el[0]).firstChild,st=$(el[1]);const tx=masked()?'Model BIS hidden (blinded)':'Model BIS ≈ '+b;if(bt.textContent!==tx)bt.textContent=tx;if(st.textContent!==sub)st.textContent=sub;}
 function slideUI(){if(drug==='mix'){fcUI();return;}$('effMark').style.left=`calc(8px + ${cl(eng.de)} * (100% - 16px))`;fcUI();}
 
 // surgical stimulus: 100 sim-s of arousal; the button shows pressed while it lasts

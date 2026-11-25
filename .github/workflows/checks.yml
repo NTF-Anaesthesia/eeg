@@ -27,7 +27,7 @@ jobs:
         run: node eeg/test/engine.check.mjs
 
   browser-suite:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.56 has no chromium build for ubuntu 26.04 (ubuntu-latest from Nov 2026)
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -38,6 +38,7 @@ jobs:
           - { name: EEG monitor sizing, cmd: "node eeg/test/layout.e2e.mjs" }
           - { name: EEG teaching, cmd: "node eeg/test/teaching.e2e.mjs" }
           - { name: EEG controls, cmd: "node eeg/test/controls.e2e.mjs" }
+          - { name: EEG workshop (blinded), cmd: "node eeg/test/workshop-blind.e2e.mjs" }
     name: browser (${{ matrix.name }})
     steps:
       - uses: actions/checkout@v4

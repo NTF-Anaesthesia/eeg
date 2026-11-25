@@ -82,7 +82,7 @@ function mtMsgUI(){const el=mq('v2Msg'),m=mtMessage();if(!m){el.hidden=true;retu
 // ---------- readouts: called once a second (and on every change) with the newest column ----------
 function mtReadouts(c,bl,sr,e){
  const sensorOn=!!MT.sensor,v=mq('v2Bis');
- v.textContent=sensorOn||bl||c.bis==null?'':String(Math.round(c.bis));v.classList.toggle('hollow',!sensorOn&&!bl&&c.sqi<50);
+ v.textContent=sensorOn||bl||c.bis==null?'':masked()?MASK:String(Math.round(c.bis));v.classList.toggle('hollow',!sensorOn&&!bl&&c.sqi<50);
  mtSqiBars();
  const en=e<30?0:e<39?1:e<48?2:e<56?3:4;[...mq('v2Emg').children].forEach((x,i)=>x.classList.toggle('on',i<en));mq('v2Emg').style.setProperty('--lv',[.05,.07,.12,.3,.6][en]); // a thin sliver at a normal EMG, growing in steps
  txt('v2St',mtHMS(tim.sup));txt('v2Sr',bl?'0':String(sr));
@@ -320,7 +320,7 @@ function mtSnap(ctx,m,X0,W,y,span){const total=span||m.win;
  ctx.fillStyle='#30d4d8';ctx.fillRect(x-5,y-4,10,8);ctx.fillStyle='#000';ctx.fillRect(x-2,y-1,4,4);}
 function mtColourBar(ctx){const x=611,y=262,h=120,g=ctx.createLinearGradient(0,y,0,y+h);MT_STOPS.forEach(t=>g.addColorStop(t[0],`rgb(${t[1]},${t[2]},${t[3]})`));ctx.fillStyle=g;ctx.fillRect(x,y,15,h);
  ctx.strokeStyle='#dfe6ef';ctx.lineWidth=1;ctx.strokeRect(x+.5,y-.5,14,h+1);mtT(ctx,'H',618.5,251,13,'#e8e8f0','center',700);mtT(ctx,'L',618.5,394,13,'#e8e8f0','center',700);}
-function mtHdr(c){const blank=!c||c.sqi<15;return {sef:blank||lastSef==null?'--':String(Math.round(lastSef)),mf:blank||lastMf==null?'--':mtPad(Math.round(lastMf)),bis:blank||c.bis==null?'--':String(Math.round(c.bis))};}
+function mtHdr(c){const blank=!c||c.sqi<15;return {sef:blank||lastSef==null?'--':String(Math.round(lastSef)),mf:blank||lastMf==null?'--':mtPad(Math.round(lastMf)),bis:blank||c.bis==null?'--':masked()?MASK:String(Math.round(c.bis))};}
 // the amplitude panel: a typical awake EEG fills a bit over half of it, the larger slow waves of anaesthesia more, burst suppression less
 const mtAmpH=v=>{const p=Math.max(0,Math.min(1,(v-3)/44));return p>.6?.6+(p-.6)*.5:p;};
 // ----- DSA + Amplitude, DSA + BIS -----
@@ -350,7 +350,7 @@ function mtDrawDsaView(ctx,withBis){const win=MT.win*60,m=mtModel(win),c=COLS[CO
   mtT(ctx,'AMPL',545,410,12,'#fff','center');}
  else{const Yb=v=>440-58*v/100;mtGaps(ctx,m,143,323,378,68);
   mtGuides(ctx,mtLabels(m,143,323),378,446);
-  mtLine(ctx,mtSeries(m,323,q=>q.bis),143,Yb,'#fff6a0',2);for(const v of [100,50,0])mtT(ctx,String(v),138,Yb(v),13,MT_YEL,'right');}
+  mtLine(ctx,mtSeries(m,323,q=>bisV(q.bis)),143,Yb,'#fff6a0',2);for(const v of [100,50,0])mtT(ctx,String(v),138,Yb(v),13,MT_YEL,'right');}
  // time axis band and the artefact strip
  const labs=mtAxisBand(ctx,m,143,323,448,466);ctx.fillStyle='#000';ctx.fillRect(466,448,136,18);
  ctx.strokeStyle=MT_FR;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(142,447);ctx.lineTo(603,447);ctx.moveTo(142,467);ctx.lineTo(603,467);ctx.stroke();
@@ -376,7 +376,7 @@ function mtDrawTrendView(ctx){const R_=MT.review,len=R_?mtReviewLen():MT.win*60,
  mtGuides(ctx,mtLabels(m,X0,W),260,448,'rgba(190,225,255,.8)');
  mtGaps(ctx,m,X0,W,260,188);
  if(rs)mtLine(ctx,mtSeries(m,W,rs),X0,v=>Yb(v),rc,1.2);
- mtLine(ctx,mtSeries(m,W,q=>q.bis),X0,Yb,'#fff6a0',2.4,true);
+ mtLine(ctx,mtSeries(m,W,q=>bisV(q.bis)),X0,Yb,'#fff6a0',2.4,true);
  // axes
  for(const v of [0,20,40,60,80,100])mtT(ctx,String(v),116,Yb(v),14,MT_YEL,'right');
  rl.forEach((s,i)=>mtT(ctx,s,610,264+i*(176/(rl.length-1)),14,rc,'left'));
@@ -392,7 +392,7 @@ function mtDrawTrendView(ctx){const R_=MT.review,len=R_?mtReviewLen():MT.win*60,
  if(R_&&R_.cur!=null&&m.n){const i=Math.max(0,Math.min(m.n-1,R_.cur)),x=Math.round(X0+(i+.5)/m.win*W)+.5,q=mtH()[m.o+i];
   ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,262);ctx.lineTo(x,448);ctx.stroke();
   const bx=Math.max(X0+6,Math.min(X0+W-110,x-125)),by=292;mtRR(ctx,bx,by,100,72,8);ctx.fillStyle='#3a3b44';ctx.fill();ctx.strokeStyle='#c8c8d0';ctx.lineWidth=2;ctx.stroke();
-  mtT(ctx,q.sqi<15||q.bis==null?'--':String(Math.round(q.bis)),bx+50,by+20,30,'#f4e84a','center',700,MT_BOLD);
+  mtT(ctx,q.sqi<15||q.bis==null?'--':masked()?MASK:String(Math.round(q.bis)),bx+50,by+20,30,'#f4e84a','center',700,MT_BOLD);
   mtT(ctx,(sec==='sr'?'SR: '+Math.round(q.bsr):sec==='sqi'?'SQI: '+q.sqi:'EMG: '+Math.round(q.emg)),bx+50,by+44,14,'#f08a24','center',700,MT_BOLD);mtT(ctx,clk(q.n)+':'+mtPad(((q.n+Math.round(T0/1000))%60+60)%60),bx+50,by+62,12,'#e0e0e8','center');
   ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(bx+100,by+36);ctx.lineTo(x-2,by+36);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(bx+100,by+36);ctx.lineTo(bx+108,by+32);ctx.lineTo(bx+108,by+40);ctx.fill();}}
 // ----- EEG as the main display -----
@@ -420,7 +420,7 @@ function mtDrawMiniTrend(ctx){const win=MT.win*60,m=mtModel(win),X0=268,W=338,Yb
  ctx.strokeStyle='#cfd9e6';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(268,63.5);ctx.lineTo(606,63.5);ctx.stroke();
  const labs=mtLabels(m,X0,W);mtGuides(ctx,labs,64,150,'rgba(190,225,255,.7)');
  if(rs)mtLine(ctx,mtSeries(m,W,rs),X0,v=>Yb(v),rc,1);
- mtLine(ctx,mtSeries(m,W,q=>q.bis),X0,Yb,'#fff6a0',1.6);
+ mtLine(ctx,mtSeries(m,W,q=>bisV(q.bis)),X0,Yb,'#fff6a0',1.6);
  for(const v of [100,80,60,40,20,0])mtT(ctx,String(v),262,Yb(v),11,MT_YEL,'right');
  rl.forEach((s,i)=>mtT(ctx,s,610,Yb(100)+i*((Yb(0)-Yb(100))/(rl.length-1)),11,rc,'left'));
  ctx.fillStyle='#000';ctx.fillRect(X0,151,W,19);ctx.strokeStyle='#cfd9e6';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(268,150.5);ctx.lineTo(606,150.5);ctx.stroke();

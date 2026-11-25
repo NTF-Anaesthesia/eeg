@@ -160,7 +160,7 @@ function sedAlarmEval(){const N=SED.N,S=SED.sim,s=SED.set,msgs=[],t=simT;let par
  else{if(S.expired)msgs.push({text:'Replace Sensor',lv:'med'});if(S.hiz&&s.monImp)msgs.push({text:'High Impedance Detected',lv:'hi'});if(S.gel&&s.monImp)msgs.push({text:'Gel Bridging Detected',lv:'med'});
   if(N&&N.sqiMin<50)msgs.push({text:'Low SIQ',lv:'med'});}
  // PSi limits: out of them for 5 s from the start, so an awake patient on the factory limits shows PSI High>50 straight away (no arming)
- const v=N&&!N.blank?N.v.psi:null,hi=s.psiHi,lo=s.psiLo;
+ const v=N&&!N.blank&&!masked()?N.v.psi:null,hi=s.psiHi,lo=s.psiLo;
  if(v!=null){const inside=(hi==null||v<=hi)&&(lo==null||v>=lo);if(inside)SED.outSince=null;else if(SED.outSince==null)SED.outSince=t;
   if(!inside&&SED.outSince!=null&&t-SED.outSince>=5){const high=hi!=null&&v>hi;par={k:'psi',dir:high?1:-1,text:high?'PSI High>'+hi:'PSI Low<'+lo,lv:'med'};}}
  else SED.outSince=null;

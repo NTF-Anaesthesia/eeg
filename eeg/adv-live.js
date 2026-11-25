@@ -17,7 +17,7 @@ function advNumLabels(){const A=ADV.alarm,k=JSON.stringify(A)+ADV.ch+ADV.hemi;if
  const lo=aq('aBadgeLow');if(lo){lo.textContent=ADV.hemi;lo.style.setProperty('--c',ADV.hemi==='R'?AC.bisR:AC.bisL);}}
 function advNumerics(){if(!ADV.built)return;advNumLabels();const two=ADV.ch===2,sides=two?['L']:['L','R'],al=ADV.alarmBox||{};
  for(const s of sides){const v=advSideVals(s);if(!v)continue;const c=v.c,dc=!!ADV.disc&&!ADV.review,blank=dc||c.sqi<15||c.bis==null,id=two?'L':s,nm=two?'':s;
-  const b=aq('aBis'+id);if(b){const t=blank?'':String(Math.round(c.bis));if(b._h!==t){b._h=t;b.textContent=t;}b.classList.toggle('box',!!al['bis'+s]&&!blank);}
+  const b=aq('aBis'+id);if(b){const t=blank?'':masked()?MASK:String(Math.round(c.bis));if(b._h!==t){b._h=t;b.textContent=t;}b.classList.toggle('box',!!al['bis'+s]&&!blank);}
   const n=dc?0:advSqiN(c.sqi),sc=aq('aSqi'+id);if(sc){const col=n>=3?AC.sqi:n===2?AC.emg:'#e4262c';sc.style.setProperty('--sc',col);[...sc.children].forEach((e,i)=>e.classList.toggle('on',i<n));}
   advSet('aEmg'+id,dc?'':advU(String(Math.round(c.emg)),'dB'));
   const eb=aq('aEmgBar'+id);if(eb){const f=dc?0:Math.max(0,Math.min(1,(c.emg-30)/25)),px=(two?83:100);eb.firstChild.style.height=Math.max(f>0?1.5:1.5,f*px)/px*100+'%';}
@@ -39,7 +39,7 @@ function advAlarmEval(){if(!ADV.built)return;const A=ADV.alarm,list=[],act=ADV.a
  const Sx=ADV.sensor;if(Sx&&Sx.done&&Sx.fail){const bad=Sx.el.filter(e=>e.st!=='pass').map(e=>e.n).join(', ');list.push(ADV.disc?{key:'tum',pri:'lo',l1:'TEMPORARILY UNABLE TO MEASURE ELECTRODES',l2:bad}:{key:'press',pri:'lo',l1:'PRESS CENTER OF ELECTRODES '+bad,l2:'TO ENABLE MONITORING'});}
  for(const s of (ADV.review?[]:sides)){const h=s==='R'?R.HIST:HIST,tail=h.slice(-10),last=h[h.length-1];if(!last)continue;
   if(ADV.disc){act['bis'+s]=false;continue;}
-  if(A.bis.on){const out=c=>c.bis!=null&&c.sqi>=15&&(c.bis<A.bis.lo||c.bis>A.bis.hi);const key='bis'+s;
+  if(A.bis.on&&!masked()){const out=c=>c.bis!=null&&c.sqi>=15&&(c.bis<A.bis.lo||c.bis>A.bis.hi);const key='bis'+s;
    if(act[key]?out(last):tail.length>=10&&tail.every(out))act[key]=true;else act[key]=false;
    if(act[key]){box['bis'+s]=true;if(!bisDir)bisDir=last.bis<A.bis.lo?-1:1;}}else act['bis'+s]=false;
   const iso=(s==='R'?R.isoN:isoN)>=60;
@@ -156,7 +156,7 @@ function advChart(force){const el=aq('advChart');if(ADV.view!=='chart')return;co
  const two=ADV.ch===2,cols=two?[['BIS','BIS',AC.bisL],['EMG','EMG <small>dB</small>',AC.emg],['SR','SR <small>%</small>',AC.sr],['SQI','SQI <small>%</small>',AC.sqi]]:[['BIS L','BIS L',AC.bisL],['BIS R','BIS R',AC.bisR],['EMG L','EMG L <small>dB</small>',AC.emg],['EMG R','EMG R <small>dB</small>',AC.emg],['SR L','SR L <small>%</small>',AC.sr],['SR R','SR R <small>%</small>',AC.sr],['ASYM','ASYM <small>%</small>',AC.asym],['SQI L','SQI L <small>%</small>',AC.sqi],['SQI R','SQI R <small>%</small>',AC.sqi]];
  const hL=advHist('L'),hR=advHist('R'),at=(h,t)=>h[Math.min(h.length-1,advLb(h,t))],rows=[],n=Math.floor((now-ADV.t0)/I);
  for(let k=n;k>=0;k--){const t=ADV.t0+k*I,L=at(hL,t),Rr=at(hR,t);if(!L||!Rr)continue;
-  const bis=e=>e.sqi<15||e.bis==null?'--':Math.round(e.bis),sq=e=>`${Math.round(e.sqi)}${e.sqi<50?'*':''}`,pl=Math.pow(10,L.tp/10),pr=Math.pow(10,Rr.tp/10),as=Math.round(100*Math.abs(pl-pr)/(pl+pr+1e-9));
+  const bis=e=>e.sqi<15||e.bis==null?'--':masked()?MASK:Math.round(e.bis),sq=e=>`${Math.round(e.sqi)}${e.sqi<50?'*':''}`,pl=Math.pow(10,L.tp/10),pr=Math.pow(10,Rr.tp/10),as=Math.round(100*Math.abs(pl-pr)/(pl+pr+1e-9));
   const vals=two?[bis(L),Math.round(L.emg),Math.round(L.bsr),sq(L)]:[bis(L),bis(Rr),Math.round(L.emg),Math.round(Rr.emg),Math.round(L.bsr),Math.round(Rr.bsr),as,sq(L),sq(Rr)];
   rows.push(`<tr class="${k===0?'st':''}"><td>${k===0?'<span style="display:inline-block;width:calc(10*var(--u));height:calc(10*var(--u));margin-right:calc(8*var(--u));background:linear-gradient(135deg,transparent 50%,#fff 50%)"></span>':''}${advClockS(t,k===0)}</td>${vals.map((x,i)=>`<td style="color:${cols[i][2]}">${x}</td>`).join('')}</tr>`);}
  const old=el.querySelector('.scroll'),st=old?old.scrollTop:0,w=two?[86,176,176,176,203]:null;
