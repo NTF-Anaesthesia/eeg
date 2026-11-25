@@ -219,3 +219,14 @@ to run it with iPads for the participants").
   scale with speed while the raw EEG feed stays at 128 samples a second, 60x under a 4x throttle).
 - Test (QA pass): `test/workshop-qa.e2e.mjs` uses real clicks for the locks, captions, address, speed, pump, Alpha dropout,
   letter shuffle and the card layout at four sizes; `test/workshop-ipad.e2e.mjs` taps a checkpoint in WebKit.
+
+## Test margins (25 Nov 2026)
+
+The EEG is random, so a browser check passes every run only if its bar sits well away from the mean. `test/margins.probe.mjs`
+(not in CI: `PORT=8080 N=40 node eeg/test/margins.probe.mjs`) repeats every noisy check of the workshop suites in one page and
+prints mean, sd and the margin in sd. Owner, 25 Nov 2026: "find some ways to make the tests less flaky because this is still an
+app in alpha stage". The first run found the maintenance BIS floors (2.0-2.5 sd), the incision and ketamine alpha checks (2.3 and
+2.6 sd) and the quiz's single reading (3.1 sd) too close; longer windows (incision 40/35 s, ketamine 40 s, dex 60 s, sevo arousal
+20 s) and bars at about 4 sd or more (maintenance 32, quiz 30) took the smallest margin to about 4 sd. Re-run it after any engine
+or case change and move the window or bar, not the engine, unless the probe shows a real change. Direction checks stay; the sizes
+of the effects are checked without noise in `test/engine.check.mjs`.
