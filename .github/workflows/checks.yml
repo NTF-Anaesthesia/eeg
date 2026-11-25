@@ -27,7 +27,7 @@ jobs:
         run: node eeg/test/engine.check.mjs
 
   browser-suite:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.56 has no chromium build for ubuntu 26.04 (ubuntu-latest from Nov 2026)
     timeout-minutes: 20
     strategy:
       fail-fast: false
