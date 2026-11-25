@@ -22,6 +22,8 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Workshop speed keys 1x to 60x (25 Nov 2026; `docs/workshop.md`): the slider popover was clipped by the dock in landscape;
+  six keys now drive the sim clock, the raw EEG stays real time, 60x holds on a throttled CPU.
 - Workshop page for iPads (25 Nov 2026; `docs/workshop.md`): controls in a side column in landscape (iPad and phone),
   stacked in portrait, 44 px touch targets, an Alpha dropout key (off during quiz checkpoints), teaching text removed, and
   its own home-screen app "EEG Workshop" that works offline; WebKit iPad test in CI.
