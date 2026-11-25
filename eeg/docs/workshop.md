@@ -2,7 +2,7 @@
 
 Part of the BIS to DSA / processed EEG notes. Index: [../NOTES.md](../NOTES.md). Added 25 Nov 2026 for a workshop segment on
 reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js`, `cases.js`, `quiz.js`, `workshop.css`, and for the `/workshop/` page `workshop/index.html`,
-`ws-monitor.js`, `ws-page.css`; the index masking lives in each skin.
+`ws-page.js`, `ws-page.css`; the index masking lives in each skin.
 
 ## Blinded mode (`?blind=1`)
 
@@ -59,7 +59,7 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   never decimated. Check: `test/workshop-realtime.e2e.mjs`.
 - Steps run on the story mechanism (`runStory`): `steps` on the story object, plus `pump` (pump targets), `act` (relaxant on or
   reversed with the page's own relaxant modes) and `ev`, a neutral event line shown instead of the caption while blinded (no
-  drug names or units, so it gives away neither the answer nor the agent).
+  drug names or units, so it gives away neither the answer nor the agent; an added drug is just "Drug given.").
 - `tci` Propofol TCI (Eleveld, Ce 4 then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
   18-Hz activity and SEF95 rising), treatment (remifentanil 3 ng/ml, Ce 4), maintenance, emergence.
 - `sevo` Sevoflurane (end-tidal 2.4% induction, 1.8% maintenance, about 1 MAC at 45 years): the same phases.
@@ -80,7 +80,9 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   lightly sedated / general anaesthesia / too deep / lightening or emerging), most likely agent (propofol / sevoflurane /
   propofol with ketamine / propofol with dexmedetomidine) and whether an arousal response is present. Check answers marks each, shows the hidden BIS and SEF95
   and a teaching note; Continue resumes. The case ends with "You scored n of 9" and Play again. Turning the quiz on mid-case
-  restarts the case; checkpoints the timeline jumps past are skipped (the latest is asked). After Check answers the pump
+  restarts the case; checkpoints the timeline jumps past are skipped (the latest is asked). In the quiz the case menu shows
+  neutral names (Case A to D, in menu order) so it gives no drug away; the real names show after Check answers (until
+  Continue) and when the case ends. After Check answers the pump
   panel (all three drug lines) shows until Continue.
 - Teaching notes are general and hedged in the page's style: DSA patterns are clues, not tests; the arousal sequence is not
   specific; a high index with ketamine need not mean emergence. Propofol and sevoflurane are told apart only by the theta clue.
@@ -94,20 +96,25 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 
 ## Workshop page (`/workshop/`, 25 Nov 2026)
 
-- eeg.anantf.com/workshop/ (`workshop/index.html`, generated from the main page's monitor section): the same engine, pump,
-  cases and quiz, with no device look. The owner's brief: "custom built for the workshop, it shouldn't have any device
-  branding". No device names, logos, bezels, menu clones, skin picker or trademark signs; the number is "the index"
-  (processed EEG index), never BIS or PSi. Inside this repo so engine fixes reach both pages; the main page is unchanged
-  (its inline style moved to `page.css`, same rules).
-- One generic dark monitor (`ws-monitor.js`, skin `ws`): 0-30 Hz DSA with the white SEF95 line (last 5 min), the raw EEG
-  at real time (`DSIG`, 4 s across a phone, 8 s wider, ±100 µV), an SEF95 / SQI / EMG / SR row and the index, masked by
-  default (Reveal; `?blind=0` opens unmasked). Unilateral or Bilateral (`?bi=1`): the right hemisphere is app.js's second
-  engine; two DSA panels, two traces, L and R numbers.
-- Always on: the NTFGH and NUHS text banners and the session title, the case picker, the Quiz key and the pump panel (on from
-  the start). The teaching sections, agent and depth controls, notes column and device options are hidden. Case captions and
-  quiz notes say "the index".
-- Full screen (projector, 1920x1080): the case strip stays, the monitor fills the left, the controls and pump scroll on the
-  right. Phone: one column.
+- eeg.anantf.com/workshop/ (`workshop/index.html`, generated from the main page's monitor section; `ws-page.js`,
+  `ws-page.css`): the same engine, pump, cases and quiz as the main page, inside this repo so engine fixes reach both.
+- Monitor: the main page's **BIS Advance** screen, fixed. The owner changed this the same day ("should be BIS Advance"):
+  his colleague asked for the BIS Advance. A first version that day had a generic, unbranded monitor instead; it was removed.
+  No skin picker; the Medtronic-style screen is left out of the page and the SedLine and IntelliVue screens are never built.
+  Unilateral / Bilateral is the Advance's own 2- or 4-channel sensor view (`?bi=1` opens bilateral). BIS is masked by
+  default (Reveal in the toolbar; `?blind=0` opens unmasked).
+- Page style: NUHS (owner, 25 Nov 2026: "We can change the theme to the NUHS theme"), from his unofficial NUHS style guide
+  (modelled on nuhs.edu.sg): navy #002f6c main colour, the four-quarter top stripe (orange #e57200, red #e4002b, blue
+  #178fd7, navy), Open Sans (self-hosted, OFL), square blocks, 5px radius on buttons and inputs, a navy 3px focus ring. The
+  values are copied into `ws-page.css`, which maps the shared page variables onto them (`demo.css` and `workshop.css` now use
+  those variables, same values on the main page). No NUHS logo. The BIS Advance screen keeps its own device look.
+- Header strip (always on, kept in full screen): the NTF Anaesthesia logo, NTFGH and NUHS large and bold, the session title.
+  Base font 19 px and larger controls for a projector ("can we also make the font and the page logo bigger"). Contrast at AA
+  or better (text #333 and navy on white; muted #5b6169 6:1; control borders 3.7:1).
+- Always on: the case picker, the Quiz key and the pump panel (on from the start).
+- Full screen (1920x1080): header strip and case bar on top, the Advance on the left, the dock (playback, case caption, pump)
+  on the right; no page scroll (the dock scrolls on its own). `demo.js` fits the monitor beside a `--fit-side` column.
+- Phone: one column, as the main page.
 - Links: `https://eeg.anantf.com/workshop/?case=propket&bi=1`, `?case=propdex&quiz=1`, `?case=tci&quiz=1`.
-- Test: `test/workshop-page.e2e.mjs` (no brand text in the DOM, masked index and Reveal, bilateral, case and quiz, ketamine
-  bolus raises Ce, projector and phone).
+- Test: `test/workshop-page.e2e.mjs` (Advance only, no other monitor names in the page, masked BIS and Reveal, bilateral,
+  header size, case and quiz with neutral names, ketamine bolus raises Ce, projector without page scroll, phone).

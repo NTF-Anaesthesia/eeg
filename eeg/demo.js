@@ -99,7 +99,9 @@ function fitMonitor(){
  // SedLine on desktop puts its children straight into #monitor's grid (demo.css), so measure #monitor's content box then
  const host=getComputedStyle(sim).display==='contents'?workspace:sim,hc=getComputedStyle(host);
  // Measure the available row, not the previous fitted column, so resizing can grow it again.
- const available=desktop?host.clientWidth-(parseFloat(hc.paddingLeft)||0)-(parseFloat(hc.paddingRight)||0)-280-parseFloat(hc.columnGap):stage.clientWidth;
+ // the notes column is 280 px; a page can set --fit-side on .sim for a different side column (the workshop page's control dock)
+ const side=parseFloat(hc.getPropertyValue('--fit-side'))||280;
+ const available=desktop?host.clientWidth-(parseFloat(hc.paddingLeft)||0)-(parseFloat(hc.paddingRight)||0)-side-parseFloat(hc.columnGap):stage.clientWidth;
  const wrap=$(id),w=available-pad('paddingLeft')-pad('paddingRight'),h=stage.clientHeight-pad('paddingTop')-pad('paddingBottom');if(!wrap||w<=0||h<=0)return;
  // shrink or grow until the device fills the height (fixed bezel parts make one step undershoot)
  if(mon.skin==='classic'){wrap.style.width=w+'px';wrap.style.height=h+'px';}

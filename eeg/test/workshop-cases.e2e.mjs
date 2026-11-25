@@ -44,7 +44,7 @@ try{
  assert.ok(d1.slow>d0.slow&&d1.alpha<d0.alpha,`dex: slow ${d0.slow.toFixed(1)} -> ${d1.slow.toFixed(1)} dB, alpha ${d0.alpha.toFixed(1)} -> ${d1.alpha.toFixed(1)} dB`);
  // blinded: the caption is the neutral event line (no interpretation, no drug name for the adjunct)
  await page.goto(BASE+'?case=propket&blind=1');await ready();await at(500);
- assert.match(await page.textContent('#storyCap'),/^5\/8 · Analgesic adjunct given\.$/,'neutral event line while blinded');
+ assert.match(await page.textContent('#storyCap'),/^5\/8 · Drug given\.$/,'neutral event line while blinded');
  assert.ok(page.url().includes('case=propket')&&page.url().includes('blind=1'),'both params kept in the address');
  // the timeline still works inside a case
  const t=await page.evaluate(()=>simT);await page.evaluate(t=>tlJump(t-200),t);await page.waitForFunction(()=>!TL.busy);
