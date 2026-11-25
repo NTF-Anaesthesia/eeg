@@ -25,3 +25,9 @@ Licences: <https://github.com/google/fonts/tree/main/apache/arimo>, <https://git
   on-screen typeface of Root; it looks like Frutiger (a "1" with a flag and no foot, narrow proportional digits). Hind is a Frutiger-style open font and
   matches the real digits much better than Source Sans 3, used before (owner, 15 Oct 2026: "the font doesn't really match"). No italic: the
   "SedLine" title's italic is drawn as an oblique.
+
+## Workshop page (`/workshop/`)
+
+- `OpenSans-latin-var.woff2`: Open Sans (SIL Open Font License 1.1), Latin subset, variable weight 300-800, from Google Fonts.
+  The page font of the workshop page's NUHS-style chrome (`ws-page.css`); the monitor screens keep their own fonts. Licence:
+  <https://github.com/google/fonts/tree/main/ofl/opensans>.

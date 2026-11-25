@@ -22,6 +22,9 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Workshop page uses the BIS Advance, NUHS page style, bigger header and font, neutral quiz names (25 Nov 2026;
+  `docs/workshop.md`): the owner's change the same day; the generic monitor is gone. Quiz case menu shows Case A-D until the
+  reveal; added-drug event lines say "Drug given.".
 - Unbranded workshop page at eeg.anantf.com/workshop/ and ketamine and dexmedetomidine lines on the TCI pump (25 Nov 2026;
   `docs/workshop.md`): a generic monitor (DSA with SEF95, real-time EEG, SQI/EMG/SR, masked index, unilateral or bilateral),
   cases, quiz and pump with no device branding; ketamine (Domino) and dex (Hannivoort) bolus/load and infusions with Ce; new

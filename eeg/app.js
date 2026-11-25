@@ -298,9 +298,8 @@ const snapAll=()=>{eng.snap();R.eng.snap();};
 // line, index alarms and the page's own BIS hints; the DSA, SEF95/MF and the raw EEG stay. Reveal shows it again until masked.
 // Set by the Blind key or ?blind=1 (workshop.js). The skins call masked() when they draw, never at load.
 const blind={on:false,reveal:false},MASK='••';
-// the unbranded workshop page (workshop/index.html sets WS_PAGE before the scripts): its own generic monitor (ws-monitor.js) and
-// neutral wording, 'index' for the processed EEG number
-const WS_PAGE=!!window.WS_PAGE,IDX=WS_PAGE?'index':'BIS';
+// the workshop page (workshop/index.html sets WS_PAGE before the scripts): BIS Advance only, header and quiz extras (ws-page.js)
+const WS_PAGE=!!window.WS_PAGE;
 const masked=()=>blind.on&&!blind.reveal,bisV=v=>masked()?null:v;
 const mon={smooth:15,scale:50,sweep:8,dbLo:DB_LO,dbHi:DB_HI,teach:true,info:'',infoUntil:0,skin:'vista',trend:5,bottom:'bis',alo:40,ahi:60};
 function applyTarget(){eng.setTarget(drug,depth,mods);R.eng.setTarget(drug,depth,modsR);describe();if(typeof onTarget==='function')onTarget();}
@@ -669,8 +668,7 @@ function setTeach(on){mon.teach=on;$('mTeach').checked=on;$('vZone').hidden=!on;
 $('mTeach').onchange=e=>setTeach(e.target.checked);
 try{if(localStorage.getItem('bisdsa.teach')==='0')setTeach(false);}catch(e){}
 // Each teaching session opens on BIS Advance with a unilateral sensor.
-if(WS_PAGE)applySkin('ws',true,true); // the workshop page's own monitor (ws-monitor.js); no device screen
-else{applySkin('advance',true,true);advBootEnd();ADV.win=5;advRelayout();}
+applySkin('advance',true,true);advBootEnd();ADV.win=5;advRelayout();
 try{const d=JSON.parse(localStorage.getItem('bisdsa.disp')||'null');if(d&&['auto',4,8,16].includes(d.sweep)){mon.sweep=d.sweep;dispUI(false);}}catch(e){}
 $('pause').onclick=()=>{paused=!paused;$('pause').setAttribute('aria-pressed',paused);$('pause').textContent=paused?'Resume':'Pause';};
 
@@ -829,7 +827,6 @@ function frameBody(now){const dt=Math.min(0.1,(now-last)/1000);last=now;
  if(mon.skin==='advance')advTick(dirty);
  if(mon.skin==='sedline')sedTick(dirty);
  if(mon.skin==='philips')pvTick(dirty);
- if(mon.skin==='ws'&&typeof wsTick==='function')wsTick(dirty);
  if(dirty){paintOff();drawTrend();drawDsa();if(mon.skin==='vista'){paintV();drawVDsa();}readouts();stimUI();dirty=false;}
  drawEeg();if(mon.skin==='vista')drawVEeg();
  if(exPlaying){exT+=dt;if(exT>=T[6]){exT=0;snapshotEx();}}

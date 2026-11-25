@@ -36,8 +36,8 @@ const CASES={
   {at:40,pump:{target:4},cap:'Induction: propofol TCI, effect-site target 4 µg/ml.',ev:'Induction.'},
   {at:110,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
   {at:360,pump:{target:3.5},cap:'Maintenance at 3.5 µg/ml: alpha and slow-delta bands, BIS in the usual range.',ev:'Maintenance.'},
-  {at:480,pump:{ketBolus:0.5,ketInf:0.5},cap:'Ketamine added: 0.5 mg/kg bolus, then 0.5 mg/kg/h (Domino model Ce on the pump). Fast beta-gamma activity appears, alpha weakens, SEF95 and BIS rise, at the same propofol target.',ev:'Analgesic adjunct given.'},
-  {at:780,pump:{ketInf:0},cap:'Ketamine infusion stopped: its effect wears off over several minutes and the propofol pattern returns.',ev:'No further adjunct.'},
+  {at:480,pump:{ketBolus:0.5,ketInf:0.5},cap:'Ketamine added: 0.5 mg/kg bolus, then 0.5 mg/kg/h (Domino model Ce on the pump). Fast beta-gamma activity appears, alpha weakens, SEF95 and BIS rise, at the same propofol target.',ev:'Drug given.'},
+  {at:780,pump:{ketInf:0},cap:'Ketamine infusion stopped: its effect wears off over several minutes and the propofol pattern returns.',ev:'Drug stopped.'},
   {at:1200,pump:{target:0},act:reverse,cap:'Emergence: pump stopped, relaxant reversed.',ev:'Anaesthetic stopped; relaxant reversed.'},
   {at:1800,end:true,cap:'Case complete. Compare the ketamine period with emergence: both raise BIS and SEF95, but the DSA differs.',ev:'Case complete.'}]},
  propdex:{label:'Propofol + dexmedetomidine',pt:{sex:'F',age:60,height:160,weight:65},model:'eleveld',steps:[
@@ -45,7 +45,7 @@ const CASES={
   {at:40,pump:{target:3.5},cap:'Induction: propofol TCI, effect-site target 3.5 µg/ml (an older patient).',ev:'Induction.'},
   {at:110,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
   {at:360,cap:'Maintenance at 3.5 µg/ml: alpha and slow-delta bands.',ev:'Maintenance.'},
-  {at:420,pump:{dexLoad:1,dexInf:0.5},cap:'Dexmedetomidine added: 1 µg/kg over 10 min, then 0.5 µg/kg/h (Hannivoort model Ce on the pump). Its effect builds slowly: more slow activity and spindle-like bursts, a weaker, slower alpha band, faster activity falls.',ev:'Sedative adjunct given.'},
+  {at:420,pump:{dexLoad:1,dexInf:0.5},cap:'Dexmedetomidine added: 1 µg/kg over 10 min, then 0.5 µg/kg/h (Hannivoort model Ce on the pump). Its effect builds slowly: more slow activity and spindle-like bursts, a weaker, slower alpha band, faster activity falls.',ev:'Drug given.'},
   {at:1080,pump:{target:2.5},cap:'Propofol target lowered to 2.5 µg/ml with the dexmedetomidine running. Assess the whole picture (DSA, raw EEG, suppression, clinical signs), not one number.',ev:'Maintenance adjusted.'},
   {at:1200,pump:{target:0,dexInf:0},act:reverse,cap:'Emergence: both stopped, relaxant reversed. Dexmedetomidine leaves slowly, so slow activity can linger.',ev:'Anaesthetic stopped; relaxant reversed.'},
   {at:1800,end:true,cap:'Case complete. Drag the timeline back to compare propofol alone with propofol and dexmedetomidine.',ev:'Case complete.'}]}
