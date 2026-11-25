@@ -1,7 +1,7 @@
 # Workshop tools (blinded reading, TCI pump, case files, quiz)
 
 Part of the BIS to DSA / processed EEG notes. Index: [../NOTES.md](../NOTES.md). Added 25 Nov 2026 for a workshop segment on
-reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js`, `workshop.css`; the index masking lives in each skin.
+reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js`, `cases.js`, `workshop.css`; the index masking lives in each skin.
 
 ## Blinded mode (`?blind=1`)
 
@@ -33,3 +33,20 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   combination turns the pump off; manual depth works as before. The timeline saves and restores the pump; drug marks on the
   bar follow pump settings, not every step.
 - Test: `test/workshop-pump.e2e.mjs`.
+
+## Case files (`cases.js`, `?case=<id>`)
+
+- A **Case** menu in a strip above the monitor, or `?case=tci|sevo|propket` (add `&blind=1` for blinded reading). A case runs
+  a 5-minute awake pre-roll, starts a fresh timeline, sets the pump for its synthetic patient and plays at 5x; the timeline
+  works inside it. Choosing no case stops it.
+- Steps run on the story mechanism (`runStory`): `steps` on the story object, plus `pump` (pump targets), `act` (relaxant on or
+  reversed with the page's own relaxant modes) and `ev`, a neutral event line shown instead of the caption while blinded.
+- `tci` Propofol TCI (Eleveld, Ce 4 then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
+  18-Hz activity and SEF95 rising), treatment (remifentanil 3 ng/ml, Ce 4), maintenance, emergence.
+- `sevo` Sevoflurane (end-tidal 2.4% induction, 1.8% maintenance, about 1 MAC at 45 years): the same phases.
+- `propket` Propofol + ketamine: maintenance, then ketamine (relative 0.6) at an unchanged propofol target raises BIS (about 45
+  to 60-65) and SEF95 and weakens alpha; it wears off over minutes before emergence.
+- Expected directions (checked by `test/workshop-cases.e2e.mjs`): maintenance BIS 40-60; incision alpha dip, then SEF95 and BIS
+  up; treatment brings them back; ketamine raises BIS and SEF95 with weaker alpha; emergence BIS above 75-80.
+- The arousal patterns are the engine's existing stimulus rules, a teaching approximation; the cases are synthetic, not timings
+  or doses to copy.

@@ -123,6 +123,7 @@ function pumpUI(){pumpBox.hidden=!PUMP.on;workspace.dataset.pump=PUMP.on?'on':'o
  $('pPt').title=started?'Reset the pump to change the patient or model':'';
  $('pTgt').value=PUMP.target;$('pTgtV').textContent=pf(PUMP.target);
  $('pSevo').value=PUMP.sevoEt;$('pSevoV').textContent=pf(PUMP.sevoEt);$('pMac').textContent=PUMP.sevoEt?`≈ ${(pumpSevoMac()).toFixed(2)} MAC`:'';
+ if(PUMP.sevoEt||PUMP.ket||PUMP.remi)$('pMore').open=true; // a case or the timeline set them: show them
  $('pKet').value=PUMP.ket;$('pKetV').textContent=PUMP.ket.toFixed(2);$('pRemi').value=PUMP.remi;$('pRemiV').textContent=pf(PUMP.remi);
  pumpRead();}
 function pumpRead(){if(!PUMP.on)return;const mlh=PUMP.r*60/TCI_SET.conc;
