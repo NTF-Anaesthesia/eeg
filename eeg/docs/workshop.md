@@ -1,7 +1,7 @@
 # Workshop tools (blinded reading, TCI pump, case files, quiz)
 
 Part of the BIS to DSA / processed EEG notes. Index: [../NOTES.md](../NOTES.md). Added 25 Nov 2026 for a workshop segment on
-reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js`, `cases.js`, `workshop.css`; the index masking lives in each skin.
+reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js`, `cases.js`, `quiz.js`, `workshop.css`; the index masking lives in each skin.
 
 ## Blinded mode (`?blind=1`)
 
@@ -40,7 +40,8 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   a 5-minute awake pre-roll, starts a fresh timeline, sets the pump for its synthetic patient and plays at 5x; the timeline
   works inside it. Choosing no case stops it.
 - Steps run on the story mechanism (`runStory`): `steps` on the story object, plus `pump` (pump targets), `act` (relaxant on or
-  reversed with the page's own relaxant modes) and `ev`, a neutral event line shown instead of the caption while blinded.
+  reversed with the page's own relaxant modes) and `ev`, a neutral event line shown instead of the caption while blinded (no
+  drug names or units, so it gives away neither the answer nor the agent).
 - `tci` Propofol TCI (Eleveld, Ce 4 then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
   18-Hz activity and SEF95 rising), treatment (remifentanil 3 ng/ml, Ce 4), maintenance, emergence.
 - `sevo` Sevoflurane (end-tidal 2.4% induction, 1.8% maintenance, about 1 MAC at 45 years): the same phases.
@@ -50,3 +51,21 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   up; treatment brings them back; ketamine raises BIS and SEF95 with weaker alpha; emergence BIS above 75-80.
 - The arousal patterns are the engine's existing stimulus rules, a teaching approximation; the cases are synthetic, not timings
   or doses to copy.
+
+## Quiz and workshop banners (`quiz.js`, `&quiz=1`, `?workshop=1`)
+
+- The **Quiz** key in the case strip (or `&quiz=1`) runs the chosen case blinded, with the pump panel and the anaesthetic
+  choice hidden. At each checkpoint (three a case, in `QUIZ`) the case pauses and a card asks: depth or phase (awake or
+  lightly sedated / general anaesthesia / too deep / lightening or emerging), most likely agent (propofol / sevoflurane /
+  propofol with ketamine) and whether an arousal response is present. Check answers marks each, shows the hidden BIS and SEF95
+  and a teaching note; Continue resumes. The case ends with "You scored n of 9" and Play again. Turning the quiz on mid-case
+  restarts the case; checkpoints the timeline jumps past are skipped (the latest is asked).
+- Teaching notes are general and hedged in the page's style: DSA patterns are clues, not tests; the arousal sequence is not
+  specific; a high index with ketamine need not mean emergence. Propofol and sevoflurane are told apart only by the theta clue.
+- `?workshop=1` adds a header row to the strip: NTFGH and NUHS as text name badges (full names on hover), and the session
+  title. No logo files and no invented logos. The strip is hidden in full screen, so pick the case first; the quiz card still
+  floats there.
+- Deep links (the `/bis/` forwarder keeps the query):
+  - `https://eeg.anantf.com/?workshop=1&case=tci&quiz=1` (blinded propofol TCI case with the quiz)
+  - `https://eeg.anantf.com/?case=propket&blind=1` (blinded, no quiz); `?case=sevo&quiz=1`
+- Test: `test/workshop-quiz.e2e.mjs`.
