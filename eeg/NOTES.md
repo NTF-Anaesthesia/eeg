@@ -13,6 +13,7 @@ These notes were split by topic into `docs/` (nothing was dropped). Read the fil
 | Masimo SedLine skin and its fidelity passes | [docs/skin-sedline.md](docs/skin-sedline.md) |
 | Tests, phone feedback, Philips IntelliVue skin, case timeline | [docs/tests-feedback-philips-timeline.md](docs/tests-feedback-philips-timeline.md) |
 | Processed EEG redesign, 16-17 Oct 2026 (teaching layout, learning examples, fullscreen) | [docs/processed-eeg-redesign.md](docs/processed-eeg-redesign.md) |
+| Workshop tools, 25 Nov 2026: blinded mode, TCI pump, case files, quiz and banners; deep links | [docs/workshop.md](docs/workshop.md) |
 
 Always true: synthetic EEG only, no data stored, no reference images or manual text in the repo (fonts are bundled with
 their licences). Run the checks in `.github/workflows/checks.yml` (repo root) after changing the engine or a skin.
