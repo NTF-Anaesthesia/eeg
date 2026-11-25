@@ -42,6 +42,8 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
     so 2 µg/ml ketamine or 2 ng/ml dexmedetomidine is the engine's full single-drug signature. The level is the mix's
     ketamine or dex and is written straight into both engines' effect site, so the PK ke0 is the only lag.
   - Emerge stops both infusions and any dose still running. A 2 mg/kg ketamine bolus peaks near 5.5 µg/ml (level capped at 1).
+  - Ketamine bolus 0.1 to 2 mg/kg: an entry outside is clamped with a message and not given; the line shows the mg given so
+    far. The dex load key turns into Stop load while it runs; a dex infusion of 0 also stops a running load.
 - Induce sets Ce 3.5; Emerge sets every target to zero (propofol then falls by the model). Choosing another agent or a
   combination turns the pump off; manual depth works as before. The timeline saves and restores the pump; drug marks on the
   bar follow pump settings, not every step.
@@ -63,15 +65,19 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 
 - A **Case** menu in a strip above the monitor, or `?case=tci|sevo|propket` (add `&blind=1` for blinded reading). A case runs
   a 5-minute awake pre-roll, starts a fresh timeline, sets the pump for its synthetic patient and plays at 5x; the timeline
-  works inside it. Choosing no case stops it. 5x stays: a 30-minute case then plays in about 6 minutes.
+  works inside it. Choosing no case stops it and clears the caption and `?case=`. A case starts at 5x only if no speed was
+  picked (key, slider or number key); a picked speed stays across cases and at the case end (no forced 1x). 5x: a 30-minute
+  case plays in about 6 minutes.
 - The raw EEG strip always sweeps at real time (25 mm/s morphology) on every screen and both hemispheres, whatever the speed;
   the DSA, trends, SEF95, the index and the clock run at the sim speed. At 1x the strip is the engine's own signal (`SIG`); at
   any other speed a display engine follows the live engine's drug, depth and state each frame and makes one frame's worth of
   real-time samples into `DSIG`, with its own burst, blink and diathermy timers so they keep their real length. `SIG` is
   never decimated. Check: `test/workshop-realtime.e2e.mjs`.
 - Steps run on the story mechanism (`runStory`): `steps` on the story object, plus `pump` (pump targets), `act` (relaxant on or
-  reversed with the page's own relaxant modes) and `ev`, a neutral event line shown instead of the caption while blinded (no
-  drug names or units, so it gives away neither the answer nor the agent; an added drug is just "Drug given.").
+  reversed with the page's own relaxant modes) and `ev`, a neutral event line (kept in the data, not shown since 25 Nov 2026).
+- Captions (QA pass, 25 Nov 2026): outside the quiz the teaching caption always shows, masked or not, without a step count
+  in a case; Reveal and Blind redraw it. In a quiz case no caption and no step count show at all; the answer card lists the
+  captions so far under "What happened". A rewind on the timeline, the pump's Reset and the blank case clear the caption.
 - `tci` Propofol TCI (Eleveld, Ce 4 then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
   18-Hz activity and SEF95 rising), treatment (remifentanil 3 ng/ml, Ce 4), maintenance, emergence.
 - `sevo` Sevoflurane (end-tidal 2.4% induction, 1.8% maintenance, about 1 MAC at 45 years): the same phases.
@@ -92,10 +98,16 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   lightly sedated / general anaesthesia / too deep / lightening or emerging), most likely agent (propofol / sevoflurane /
   propofol with ketamine / propofol with dexmedetomidine) and whether an arousal response is present. Check answers marks each, shows the hidden BIS and SEF95
   and a teaching note; Continue resumes. The case ends with "You scored n of 9" and Play again. Turning the quiz on mid-case
-  restarts the case; checkpoints the timeline jumps past are skipped (the latest is asked). In the quiz the case menu shows
-  neutral names (Case A to D, in menu order) so it gives no drug away; the real names show after Check answers (until
-  Continue) and when the case ends. After Check answers the pump
-  panel (all three drug lines) shows until Continue.
+  restarts the case. In the quiz the case menu shows neutral names (Case A to D, letters shuffled each time the quiz is
+  turned on, so a letter gives no drug away); "Case B is Propofol TCI" shows after Check answers (until Continue) and when
+  the case ends. After Check answers the pump panel (all three drug lines) shows until Continue. Focus goes to the card
+  heading, not the first answer.
+- Locks (QA pass, 25 Nov 2026), so the answer cannot be peeked or the question skipped: while a checkpoint asks, Reveal and
+  the Blind key do nothing; while the card is open (question or answer), play / pause, the speed keys and slider, the
+  timeline, the case menu and the Quiz key are disabled; in a quiz case Induce, Emerge and the timeline are disabled. Outside
+  the quiz lock a jump past a checkpoint marks it skipped, never asked against later EEG. Once a quiz case runs, `case` and
+  `quiz` are dropped from the address (`history.replaceState`), so a reload or a shared link does not name the case; a quiz
+  link shows no step-1 caption.
 - Teaching notes are general and hedged in the page's style: DSA patterns are clues, not tests; the arousal sequence is not
   specific; a high index with ketamine need not mean emergence. Propofol and sevoflurane are told apart only by the theta clue.
 - `?workshop=1` adds a header row to the strip: NTFGH and NUHS as text name badges (full names on hover), and the session
@@ -142,11 +154,16 @@ to run it with iPads for the participants").
   "When I use landscape - can the toggle buttons be on the side instead of at the bottom?"); the monitor takes the rest of
   the row. `ws-page.css` sets `--fit-desk:1` so `demo.js` fits the monitor beside `--fit-side` below 1101 px too. Touch
   screens get a narrower column (330 px; 290 px on a phone) and a smaller header. Portrait: stacked, the monitor full width.
+- Quiz card (QA pass, 25 Nov 2026): it sits at the top of the control column and the other controls hide while it is open
+  (the pump comes back under the answer), so it never covers the monitor: beside it in landscape, under it in portrait.
+  Check answers is in view without scrolling inside the card at 820x1180, 1180x820, 1024x1366 and 1920x1080 (answers in two
+  columns in landscape). Focus mode fills the viewport on iPads (290 px side column in touch landscape) and 1920x1080.
 - Touch: every control outside the device screen is at least 44 px; inputs use 16 px text (no iOS zoom); `touch-action:
   manipulation` stops double-tap zoom; controls are not text-selectable; the sliders are 44 px high. The full-screen key
   falls back to the page's own focus mode where the browser has no real full screen (iPhone Safari).
 - Alpha dropout key (colleague: "Actually burst suppression no need cos I can just increase depth and it will happen. But
-  can have the alpha dropout."): runs the main page's alpha stimulus; off while a quiz checkpoint is open or a stimulus runs.
+  can have the alpha dropout."): runs the main page's alpha stimulus; off while awake (BIS above 80, nothing to drop out), while a quiz checkpoint is open
+  or a stimulus runs.
 - Home-screen app "EEG Workshop": `workshop/manifest.webmanifest` (`id` "/workshop/", `start_url` and `scope` `./`, so it
   works at /workshop/ and /eeg/workshop/; standalone, any orientation, NUHS navy), its own icons (`workshop/icons/`, a white
   EEG trace and "W" on navy with the NUHS stripe), iOS meta (title, apple-touch-icon). The browser's install prompt is
@@ -181,4 +198,5 @@ to run it with iPads for the participants").
   2.5-2.6 s; pump target 6 117-121 s / 11.4-11.8 s / 2.0 s.
 - Test: `test/workshop-speed.e2e.mjs` clicks the real keys (layout at iPad and phone sizes, timings, DSA columns per second
   scale with speed while the raw EEG feed stays at 128 samples a second, 60x under a 4x throttle).
-
+- Test (QA pass): `test/workshop-qa.e2e.mjs` uses real clicks for the locks, captions, address, speed, pump, Alpha dropout,
+  letter shuffle and the card layout at four sizes; `test/workshop-ipad.e2e.mjs` taps a checkpoint in WebKit.

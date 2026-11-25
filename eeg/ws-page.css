@@ -185,3 +185,40 @@ body.ws-page{
 .ws-page #monitor .ws-speed button:first-child{border-left:0}
 .ws-page #monitor .ws-speed button[aria-pressed=true]{background:var(--n-navy);color:#fff}
 .ws-page #monitor .ws-speed button:focus-visible{outline:0;box-shadow:inset 0 0 0 3px var(--n-navy),inset 0 0 0 5px #fff}
+/* quiz card (QA pass, 25 Nov 2026): at the top of the control column while open (ws-page.js), never over the monitor: beside it in
+   landscape, under it in portrait. The rest of the column is hidden (locked anyway); the answer view brings the pump back under
+   the card. The answers sit in a grid so "Check answers" fits without scrolling on iPads and laptops; the answer view may scroll. */
+.ws-page #monitor[data-qopen] .panel>:not(.quiz-card){display:none}
+.ws-page #monitor[data-qopen][data-quiz=reveal] .panel>.depth-control{display:revert}
+.ws-page #monitor .quiz-card.ws-qcard{position:static;inset:auto;z-index:auto;order:0;flex:none;width:100%;max-width:none;max-height:none;margin:0;padding:10px 12px;box-shadow:none;font-size:16px;overflow:visible}
+.ws-page .ws-qcard h2{font-size:20px;margin:0 0 2px}
+.ws-page .ws-qcard h2:focus{outline:0}
+.ws-page .ws-qcard .quiz-lead{font-size:15px;line-height:1.3;margin:0}
+.ws-page .ws-qcard :is(p,.quiz-res){margin:4px 0}
+.ws-page .ws-qcard legend{font:700 16px/1.25 var(--n-font);color:var(--n-ink);margin-bottom:0}
+.ws-page .ws-qcard fieldset{margin:4px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0 6px}
+.ws-page .ws-qcard label{min-height:44px;font-size:16px;line-height:1.15;padding:1px 2px;gap:8px}
+.ws-page .ws-qcard .quiz-actions{margin-top:6px}
+.ws-page .ws-qcard .quiz-actions button{min-height:48px;padding:8px 18px}
+.ws-page .ws-qcard .quiz-note,.ws-page .ws-qcard .quiz-events{font-size:15px;line-height:1.4}
+.ws-page .ws-qcard .quiz-case{margin:6px 0;font-weight:700;color:var(--n-navy)}.ws-page .ws-qcard .quiz-case span{font-weight:400;color:var(--n-muted,#5b6169)}
+.ws-page .ws-qcard .quiz-events{margin:6px 0;padding:8px 10px;border-left:4px solid var(--n-navy);background:#eef3f8}
+.ws-page .ws-qcard .quiz-events ul{margin:4px 0 0;padding-left:18px}
+@media (min-width:1101px),(orientation:landscape) and (min-width:640px){
+ .ws-page #monitor .ws-qcard fieldset{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* phone landscape: the column is short; two answers a row still, smaller text */
+@media (orientation:landscape) and (max-height:540px){.ws-page .ws-qcard label{font-size:15px}.ws-page .ws-qcard .quiz-lead{display:none}}
+.ws-page #monitor .tline.locked,.ws-page #tLine.locked{opacity:.55}
+.ws-page .pump-msg{font-size:15px}
+/* full screen on a touch screen (iPad): the header shrinks to one slim row so the monitor gets the room (QA pass, 25 Nov 2026: focus
+   mode grew the monitor by 16 px); laptops and the projector keep the full header (owner) */
+@media (orientation:landscape) and (min-width:640px) and (max-width:1366px) and (pointer:coarse){.ws-page #monitor.presenting .sim{--fit-side:290px}}
+@media (pointer:coarse){
+ .ws-page #monitor.presenting .ws-logo img{height:36px}
+ .ws-page #monitor.presenting .ws-org{font-size:26px}
+ .ws-page #monitor.presenting .ws-title{display:none}
+ .ws-page #monitor.presenting .ws-banner{padding:4px 0;gap:4px 12px}
+ .ws-page #monitor.presenting .ws-strip{padding-bottom:4px}
+ .ws-page #monitor.presenting .apptitle{display:none}
+}

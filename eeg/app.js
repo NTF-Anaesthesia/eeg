@@ -52,7 +52,10 @@ const MIXMAX={propofol:8,sevo:2,remi:8,ketamine:1,dex:1,n2o:0.7}; // slider rang
 const MAC=[[0,0],[0.3,0.3],[0.5,0.44],[1,0.6],[1.5,0.76],[2,0.88]]; // sevoflurane MAC -> depth
 function sevoDepth(mac){let i=0;while(i<MAC.length-2&&mac>MAC[i+1][0])i++;const [x0,y0]=MAC[i],[x1,y1]=MAC[i+1];return y0+(y1-y0)*cl((mac-x0)/(x1-x0));}
 function mixTarget(m,bsShift){
- const dP=m.propofol*0.155,dS=sevoDepth(m.sevo),sh=dP+dS>0?dS/(dP+dS):0,hyp=Math.min(0.95-0.05*sh,dP+dS),on=hyp>0.05?1:0;
+ // above 0.9 the sum saturates softly instead of a hard cap at 0.95 (QA pass, 25 Nov 2026: with the cap, a sum far above it held
+ // suppression flat for minutes after every agent was stopped, then dropped); unchanged up to 0.9
+ const dP=m.propofol*0.155,dS=sevoDepth(m.sevo),sh=dP+dS>0?dS/(dP+dS):0,sum=dP+dS,top=1-0.05*sh,
+  hyp=sum<=0.9?sum:0.9+(top-0.9)*(1-Math.exp(-(sum-0.9)/0.35)),on=hyp>0.05?1:0;
  // remifentanil: no BIS effect before stimulation (Guignard 2000); only high doses deepen
  const dH=cl(hyp+0.004*Math.max(0,m.remi-4)+0.12*m.dex*on+0.15*m.n2o);
  const a=baseTarget('propofol',dH),b=baseTarget('sevo',dH),p={};
@@ -744,16 +747,21 @@ function stopStory(){if(!story)return;story=null;storyButtonUI('Play induction �
 $('storyBtn').onclick=()=>{if(story){stopStory();$('storyCap').textContent='';return;}
  nmReset();story={t0:simT,i:-1};mods.elderly=false;$('mElder').checked=false;for(const [k,id] of SMODS){mods[k]=false;$(id).checked=false;}setNmb('off');eng.stT=R.eng.stT=0;tim.sup=tim.low=R.tim.sup=R.tim.low=0;setSpeed(10);
  if(paused)$('pause').click();storyButtonUI('Stop demonstration');};
-// workshop cases (cases.js) bring their own steps, which may also set the TCI pump (pump), call act() and carry a neutral
-// event line (ev) shown instead of the caption while the index is blinded
-function runStory(){if(!story)return;const t=simT-story.t0,steps=story.steps||(story.lesson?EEG_LESSONS[story.lesson].steps:STORY);
+// workshop cases (cases.js) bring their own steps, which may also set the TCI pump (pump) and call act(). A case shows its
+// teaching caption, masked or not, with no step count (the mask hides the number, not the teaching); in the quiz the caption
+// is hidden (capHidden, quiz.js) and the answer lists it. A case keeps the chosen speed at its end (QA pass, 25 Nov 2026).
+const storySteps=()=>story.steps||(story.lesson?EEG_LESSONS[story.lesson].steps:STORY);
+function storyCapText(i,steps){const s=steps[i];if(typeof capHidden==='function'&&capHidden())return '';return story&&story.case?s.cap:`${i+1}/${steps.length} · ${s.cap}`;}
+// redraw the current step's caption (Reveal, Blind, the quiz turned off)
+function storyCapRefresh(){if(story&&story.i>=0)$('storyCap').textContent=storyCapText(story.i,storySteps());}
+function runStory(){if(!story)return;const t=simT-story.t0,steps=storySteps();
  while(story.i+1<steps.length&&t>=steps[story.i+1].at){story.i++;const s=steps[story.i];
   if(s.drug)setDrug(s.drug);if(s.d!=null){depth=s.d;$('depth').value=Math.round(s.d*100);}
   if(s.mods){for(const [k,id] of SMODS){mods[k]=!!(s.mods[k]||story.overlays?.[k]);$(id).checked=mods[k];}setNmb(s.mods.nmb===false?'off':s.mods.nmb===true?'on':'off');}
   if(s.stim)stimAll(s.stim);else if(s.mods)eng.stT=R.eng.stT=0;
   if(s.pump&&typeof pumpSet==='function')pumpSet(s.pump);if(typeof s.act==='function')s.act();
-  applyTarget();if(s.snap)snapAll();$('storyCap').textContent=`${story.i+1}/${steps.length} · ${masked()&&s.ev?s.ev:s.cap}`;
-  if(s.end){story=null;storyButtonUI('Replay demonstration');setSpeed(1);return;}}}
+  applyTarget();if(s.snap)snapAll();$('storyCap').textContent=storyCapText(story.i,steps);
+  if(s.end){const wasCase=!!story.case;story=null;storyButtonUI('Replay demonstration');if(!wasCase)setSpeed(1);return;}}}
 
 // ===== explainer animation =====
 const cEx=$('cEx');

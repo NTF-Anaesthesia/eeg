@@ -1,7 +1,8 @@
 // Workshop case files (25 Nov 2026): scripted, synthetic cases run on the story mechanism (app.js runStory) with the TCI pump
 // (pump.js) as the drug source. Each step: at (sim s from the case start), pump (pumpSet fields), stim (stimulus kind), act
-// (a function: relaxant, reversal), cap (caption, the teaching line), ev (a neutral event line shown instead while blinded:
-// no drug names or units, so the caption gives neither the answer nor the agent away).
+// (a function: relaxant, reversal), cap (caption, the teaching line), ev (a neutral event line; since 25 Nov 2026 the caption
+// is the teaching line outside the quiz and hidden in it, so ev is kept only as a short label). A case starts at 5x unless
+// the user has picked a speed (window.speedPicked).
 // Loaded after pump.js. Deep link: ?case=<id> (with ?blind=1 for blinded reading; quiz checkpoints live in quiz.js).
 // Patterns follow the engine's rules (app.js): surgical stimulus = 100 s; 'alpha' dips the alpha band, 'beta' adds 18-Hz activity
 // (García 2021, Hight 2019); remifentanil blunts it; ketamine adds fast activity and can raise BIS without lightening.
@@ -56,7 +57,7 @@ function startCase(id){const c=CASES[id];if(!c||TL.busy)return false;stopStory()
  eng.stT=R.eng.stT=0;pumpStart();PUMP.model=c.model;PUMP.pt=Object.assign({},c.pt);pumpModes();pumpUI();snapAll();
  step(300*FS);stepR(300*FS);simT+=300;ADV.pre=null;ADV.cut=null;ADV.review=null;ADV.win=5;ADV.t0=simT-300;ADV.hc=null;
  TL.snaps=[];TL.events=[];TL.key='';TL.t0=simT;TL.max=simT;tim.sup=tim.low=R.tim.sup=R.tim.low=0;PUMP.hist=[];
- story={t0:simT,i:-1,case:id,steps:c.steps};runStory();tlSnap();tlAfter();setSpeed(5);if(paused)$('pause').click();
+ story={t0:simT,i:-1,case:id,steps:c.steps};runStory();tlSnap();tlAfter();if(!window.speedPicked)setSpeed(5);if(paused)$('pause').click();
  caseSel.value=id;syncDemoControls();caseUrl(id);return true;}
 function caseUrl(id){try{const u=new URL(location.href);if(id)u.searchParams.set('case',id);else u.searchParams.delete('case');history.replaceState(null,'',u);}catch(e){}}
 // the menu: a strip above the monitor (the workshop banners join it later)
@@ -64,7 +65,7 @@ const wsStrip=document.createElement('div');wsStrip.className='ws-strip';wsStrip
 wsStrip.innerHTML=`<label class="ws-case"><span>Case</span><select id="caseChoice"><option value="">Choose a workshop case…</option>${Object.entries(CASES).map(([k,c])=>`<option value="${k}">${c.label}</option>`).join('')}</select></label>`;
 workspace.querySelector('.monhead').after(wsStrip);
 const caseSel=$('caseChoice');
-caseSel.addEventListener('change',e=>{if(e.target.value)startCase(e.target.value);else{stopStory();caseUrl(null);}});
+caseSel.addEventListener('change',e=>{if(e.target.value)startCase(e.target.value);else{stopStory();caseUrl(null);$('storyCap').textContent='';}});
 // the menu follows the story: blank once the case ends or is stopped
 setInterval(()=>{const id=story?.case||'';if(caseSel.value!==id&&document.activeElement!==caseSel)caseSel.value=id;},500);
 {const id=new URLSearchParams(location.search).get('case');if(id&&CASES[id])startCase(id);}

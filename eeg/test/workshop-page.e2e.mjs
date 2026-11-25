@@ -42,12 +42,12 @@ try{
  const k1=await page.evaluate(()=>({ce:kdxCe(PUMP.k),mix:mix.ketamine}));assert.ok(k1.ce>k0+0.3,`ketamine bolus raises Ce (${k0} -> ${k1.ce})`);assert.ok(k1.mix>0.1);
  assert.equal((await caseNames(page))[2],'Propofol + ketamine: a high BIS that is not emergence','real case names outside the quiz');
  await page.close();
- // 4. a case with the quiz: neutral case names and event lines, drug details hidden, the reveal shows names and pump
+ // 4. a case with the quiz: neutral case names, no step captions, drug details hidden, the reveal shows names and pump
  page=await open('?case=propket&quiz=1',1280,860);
  assert.equal(await page.evaluate(()=>qz.case),'propket');assert.ok(await page.locator('#pumpCtl').isHidden(),'quiz hides the drug details');
  assert.deepEqual(await caseNames(page),['Case A','Case B','Case C','Case D'],'neutral case names in the quiz');
  await runTo(page,350);await page.waitForSelector('#quizCard:not([hidden]) #quizTitle');await page.click('#quizCheck');await page.click('#quizNext');
- await runTo(page,500);assert.match(await page.textContent('#storyCap'),/· Drug given\.$/,'neutral event line');
+ await runTo(page,500);assert.equal(await page.textContent('#storyCap'),'','no step caption in a quiz case');
  await runTo(page,705);await page.waitForSelector('#quizCard:not([hidden]) #quizTitle');assert.match(await page.textContent('#quizTitle'),/Checkpoint 2 of 3/);
  for(const [q,v] of Object.entries({phase:1,agent:2,arousal:0}))await page.check(`#quizForm input[name=q_${q}][value="${v}"]`);await page.click('#quizCheck');
  assert.ok(await page.locator('#pumpCtl').isVisible(),'the reveal shows the pump');assert.match((await caseNames(page))[2],/^Propofol \+ ketamine/,'and the real case names');

@@ -42,14 +42,15 @@ function tlAfter(){dirty=true;
  try{snapshotEx();}catch(e){}
  TL.key=tlKey();tlDraw();}
 // jump to sim time T (seconds); back: restore and run on to T; forward: run on. Long runs go in slices so the page stays alive.
-function tlJump(T){if(TL.busy)return;T=Math.round(T);const lo=TL.snaps.length?TL.snaps[0].t:simT;T=Math.max(lo,T);if(Math.abs(T-simT)<1)return;
+function tlJump(T){if(TL.busy||TL.lock)return; // TL.lock: the workshop quiz (quiz.js)
+T=Math.round(T);const lo=TL.snaps.length?TL.snaps[0].t:simT;T=Math.max(lo,T);if(Math.abs(T-simT)<1)return;
  TL.busy=true;const wasPaused=paused;paused=true;tlBusyUI(true);
- const finish=()=>{TL.busy=false;paused=wasPaused;tlBusyUI(false);tlAfter();};
+ const finish=()=>{TL.busy=false;paused=wasPaused;tlBusyUI(false);tlAfter();if(typeof TL.onJump==='function')TL.onJump(T);}; // onJump: the quiz skips checkpoints it passed
  if(T<simT){let i=TL.snaps.length-1;while(i>0&&TL.snaps[i].t>T-20)i--;const s=TL.snaps[i];
   stopStory();tlSetUi(s.ui);
   tlSetChan(s.L,mods);swapCh();try{tlSetChan(s.R,modsR);}finally{swapCh();}
   if(typeof pumpLoad==='function'){if(s.pump)pumpLoad(s.pump);else pumpOff();}Object.assign(nm,s.nm);story=s.story?Object.assign({},s.story):null;if(story)storyButtonUI('Stop demonstration');
-  simT=s.t;TL.snaps.length=i+1;TL.events=TL.events.filter(t=>t<=simT);}
+  simT=s.t;TL.snaps.length=i+1;TL.events=TL.events.filter(t=>t<=simT);$('storyCap').textContent='';} // a rewound caption would be stale (QA pass, 25 Nov 2026)
  let left=Math.round(T-simT);const total=Math.max(1,left);
  const slice=()=>{const n=Math.min(left,60);tlRun(n);left-=n;tlDraw();const tn=$('tNow');tn._t=null;tn.textContent=`${Math.round(100*(1-left/total))}%`;if(left>0)setTimeout(slice,0);else finish();};
  slice();}
@@ -66,7 +67,7 @@ function tlDraw(){const cv=$('tCv');if(!cv||TL.t0==null)return;const w=cv.client
  const x=X(simT);c.fillStyle='#fff';c.beginPath();c.arc(x,y,7,0,7);c.fill();c.strokeStyle='#002f6c';c.lineWidth=2;c.stroke();
  const el=$('tNow'),txt2=tlFmt(simT-t0);if(el._t!==txt2){el._t=txt2;el.textContent=txt2;}
  el.title=TL.max-simT>=1?`Rewound ${tlFmt(TL.max-simT)}`:'Elapsed simulation time';
- const slider=$('timeScrub');if(slider&&!TL.scrubbing){slider.max=Math.max(900,Math.ceil((TL.max-t0+300)/300)*300);slider.value=Math.round(simT-t0);slider.setAttribute('aria-valuetext',tlFmt(simT-t0));}if(slider)slider.disabled=TL.busy;}
+ const slider=$('timeScrub');if(slider&&!TL.scrubbing){slider.max=Math.max(900,Math.ceil((TL.max-t0+300)/300)*300);slider.value=Math.round(simT-t0);slider.setAttribute('aria-valuetext',tlFmt(simT-t0));}if(slider)slider.disabled=TL.busy||!!TL.lock;}
 function tlBusyUI(on){$('tLine').classList.toggle('busy',on);$('tLine').setAttribute('aria-busy',String(on));const tn=$('tNow');tn._t=null;if(on)tn.textContent='…';}
 document.querySelectorAll('#tBtns button').forEach(b=>b.onclick=()=>tlJump(simT+(+b.dataset.j)));
 $('tCv').addEventListener('click',e=>{if(TL.t0==null)return;const r=e.currentTarget.getBoundingClientRect(),w=r.width,span=Math.max(600,TL.max-TL.t0,simT-TL.t0);

@@ -22,6 +22,10 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Workshop quiz hardening (25 Nov 2026, after an independent QA pass; `docs/workshop.md`): no captions or step count in a
+  quiz case, Reveal / Blind / Induce / Emerge / playback / timeline / case menu locked at checkpoints, quiz card beside or
+  under the monitor, address cleared, letters shuffled, speed kept, dex load stoppable, ketamine dose clamped; depth now
+  lightens soon after all agents stop (soft cap on the summed hypnotic). Test: `test/workshop-qa.e2e.mjs`.
 - More realistic EEG (25 Nov 2026; `docs/engine-and-wording.md` "Signal realism"): shaped random-phase noise in
   place of the oscillator bank, slow band drift, skewed slow waves with alpha riding them, burst onset waves and
   flatter suppression, awake EMG and movement artefacts, stronger alpha dropout. Index ranges unchanged; cheaper CPU.
