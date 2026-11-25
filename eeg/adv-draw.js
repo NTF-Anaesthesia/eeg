@@ -166,7 +166,7 @@ function advDrawAsym(ctx,L,D,y0,h,group){const small=h<130,fs=small?12:15.5;cons
  for(const {v,t,y} of advKeep(lab.map(([v,t])=>({v,t,y:Math.max(y0+7,Math.min(y0+h-6,Y(v)))})),small?11:13)){advTx(ctx,t.replace('% ',''),ADV_X-7,y,fs,AC.axis,'right');if(t.startsWith('%'))advTx(ctx,'%',ADV_X-7-fs*1.8,y,fs-2,AC.axis,'right');}
  // L and R markers at the right edge
  for(const [t,yy,c] of [['L',Y(60),AC.bisL],['R',Y(-60),AC.bisR]]){const x=ADV_X+ADV_PX+31;ctx.beginPath();ctx.arc(x,yy,11.5,0,7);ctx.fillStyle='#44546c';ctx.fill();advTx(ctx,t,x,yy+.5,14,c,'center');}}
-function advEegSig(side){return side==='R'?{sig:R.SIG,prod:R.produced}:{sig:SIG,prod:produced};}
+function advEegSig(side){return side==='R'?{sig:R.DSIG,prod:R.dProduced}:{sig:DSIG,prod:dProduced};} // the real-time display stream (app.js)
 // What the monitor shows of the EEG: the real trace is a 1 px jagged line, slow delta/theta waves (about a quarter to a third of the frame, about +-20 uV
 // in general anaesthesia) with a 20-40 Hz hash on them and a drifting amplitude. The engine's signal is smoothed a little (a 5-tap kernel), a rough
 // share of the fast residue is kept, and a band-limited noise (4 to 5 percent of the frame, a fresh value every sample, fixed by the sample's own number so

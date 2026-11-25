@@ -22,6 +22,8 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Raw EEG strip at real time at any sim speed (25 Nov 2026; `docs/workshop.md`): cases at 5x no longer race the trace; the DSA,
+  trends and index still run at 5x.
 - Workshop tools for a blinded DSA and SEF95 reading session (25 Nov 2026; `docs/workshop.md`; #4-#7): blinded mode
   (`?blind=1`, Reveal), a built-in propofol TCI pump ported from the anantf-site TCI emulator (Eleveld, Schnider, Marsh; with
   sevoflurane, ketamine and remifentanil), three scripted cases (`?case=tci|sevo|propket`), a checkpoint quiz with a score

@@ -71,7 +71,7 @@ function pvEcgAt(t,beat){const u=t-beat;let v=0;const g=(c,w,a)=>a*Math.exp(-((u
  v+=g(-.16,.022,.12)+g(-.03,.008,-.12)+g(0,.01,1)+g(.025,.009,-.28)+g(.24,.045,.28);return v;}
 function pvPlethAt(t,beat){const u=t-beat-.22;if(u<0)return 0;const rise=Math.min(1,u/.12),up=Math.sin(rise*Math.PI/2),dec=Math.exp(-Math.max(0,u-.12)/.32);
  return up*(.7*dec+.3*Math.exp(-Math.max(0,u-.12)/.9))+.12*Math.exp(-((u-.42)*(u-.42))/(2*.04*.04));}
-function pvWaves(){const n=PV_X1-PV_X0,tNow=produced/FS;let W=PV.wv;
+function pvWaves(){const n=PV_X1-PV_X0,tNow=dProduced/FS;let W=PV.wv; // real time at any sim speed (app.js DSIG)
  if(!W||tNow<W.t-1||tNow-W.t>30){W=PV.wv={t:tNow-n/PV_PXS,x:0,ecg:new Float32Array(n*2),pl:new Float32Array(n*2),eeg:new Float32Array(n*2),beats:[],next:tNow-n/PV_PXS};}
  const col=Math.floor((tNow-W.t)*PV_PXS);
  for(let k=0;k<col;k++){const t0=W.t+k/PV_PXS,t1=t0+1/PV_PXS,x=(W.x+k)%n;
@@ -80,8 +80,8 @@ function pvWaves(){const n=PV_X1-PV_X0,tNow=produced/FS;let W=PV.wv;
    if(e<emn)emn=e;if(e>emx)emx=e;if(p<pmn)pmn=p;if(p>pmx)pmx=p;}
   W.ecg[2*x]=emn;W.ecg[2*x+1]=emx;W.pl[2*x]=pmn;W.pl[2*x+1]=pmx;
   // EEG: every engine sample inside this column
-  let gmn=1e9,gmx=-1e9;const a=Math.floor(t0*FS),b=Math.max(a+1,Math.floor(t1*FS)),base=produced-SIG.length;
-  for(let i=a;i<b;i++){const j=i-base;const v=j>=0&&j<SIG.length?SIG[j]:0;if(v<gmn)gmn=v;if(v>gmx)gmx=v;}
+  let gmn=1e9,gmx=-1e9;const a=Math.floor(t0*FS),b=Math.max(a+1,Math.floor(t1*FS)),base=dProduced-DSIG.length;
+  for(let i=a;i<b;i++){const j=i-base;const v=j>=0&&j<DSIG.length?DSIG[j]:0;if(v<gmn)gmn=v;if(v>gmx)gmx=v;}
   W.eeg[2*x]=gmn;W.eeg[2*x+1]=gmx;}
  if(col>0){W.t+=col/PV_PXS;W.x=(W.x+col)%n;}
  return W;}

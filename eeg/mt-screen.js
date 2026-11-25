@@ -402,13 +402,13 @@ function mtDrawEegView(ctx){mtFrame(ctx,90,232,528,244,6);
  ctx.strokeStyle=MT_FR;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(91,250.5);ctx.lineTo(617,250.5);ctx.stroke();
  mtSweepBox(ctx,92,252,524,222,true);}
 const MT_GAIN=1.25; // awake traces here are small (sd about 10 uV): drawn a little larger so they fill the box like the real screen's; clipped at the box edge
-function mtSweepBox(ctx,x,y,w,h,big){const N=Math.round(w/MT_PXS*FS),two=MT.channels===2,hh=two?h/2:h,pos=produced%N,gap=Math.round(Math.max(24,w*0.08)),gapN=Math.round(gap/w*N);
+function mtSweepBox(ctx,x,y,w,h,big){const N=Math.round(w/MT_PXS*FS),two=MT.channels===2,hh=two?h/2:h,pos=dProduced%N,gap=Math.round(Math.max(24,w*0.08)),gapN=Math.round(gap/w*N);
  ctx.fillStyle='#05080a';ctx.fillRect(x,y,w,h);
- for(let ch=0;ch<(two?2:1);ch++){const arr=ch?R.SIG:SIG,top=y+ch*hh;ctx.save();ctx.beginPath();ctx.rect(x,top,w,hh);ctx.clip();
+ for(let ch=0;ch<(two?2:1);ch++){const arr=ch?R.DSIG:DSIG,top=y+ch*hh;ctx.save();ctx.beginPath();ctx.rect(x,top,w,hh);ctx.clip();
   ctx.fillStyle='rgba(47,74,130,.9)';ctx.fillRect(x+pos/N*w,top,gap,hh);
   ctx.strokeStyle='#8fd02a';ctx.lineWidth=1.5;ctx.beginPath();const L=arr.length-1;let pen=false;
   for(let j=0;j<N;j++){let idx;if(j<pos)idx=L-(pos-1-j);else if(j>=pos+gapN)idx=L-(pos-1-j)-N;else{pen=false;continue;}
-   if(idx<0||idx>L){pen=false;continue;}let v=arr[idx];if(!MT.filters)v+=9*Math.sin(2*Math.PI*50*(produced-(L-idx))/FS);
+   if(idx<0||idx>L){pen=false;continue;}let v=arr[idx];if(!MT.filters)v+=9*Math.sin(2*Math.PI*50*(dProduced-(L-idx))/FS);
    const X=x+j/N*w,Y=top+hh/2-v*MT_GAIN*(hh/100);pen?ctx.lineTo(X,Y):ctx.moveTo(X,Y);pen=true;}
   ctx.stroke();ctx.restore();}
 }
