@@ -22,6 +22,8 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Pump default Schnider (25 Nov 2026; `docs/workshop.md`): Eleveld made emergence about 11 min to BIS 80 and induction
+  about 2.4 min to BIS < 60; Schnider about 4 min and 75 s. All four cases switched; Eleveld and Marsh still selectable.
 - Workshop quiz hardening (25 Nov 2026, after an independent QA pass; `docs/workshop.md`): no captions or step count in a
   quiz case, Reveal / Blind / Induce / Emerge / playback / timeline / case menu locked at checkpoints, quiz card beside or
   under the monitor, address cleared, letters shuffled, speed kept, dex load stoppable, ketamine dose clamped; depth now

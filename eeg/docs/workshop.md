@@ -19,8 +19,8 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 
 ## TCI pump (`pump.js`)
 
-- Anaesthetic → **TCI pump**: a propofol target-controlled infusion panel replaces the combination choices. Model Eleveld
-  (arterial, opioid on), Schnider or Marsh (ke0 0.26/min); Ce (effect-site) or Cp (plasma) target, 0-8 µg/ml; patient sex, age,
+- Anaesthetic → **TCI pump**: a propofol target-controlled infusion panel replaces the combination choices. Model Schnider
+  (the default since 25 Nov 2026), Eleveld (arterial, opioid on) or Marsh (ke0 0.26/min); Ce (effect-site) or Cp (plasma) target, 0-8 µg/ml; patient sex, age,
   height and weight (locked once drug is given; Reset clears the pump). Readout: Cp, Ce, rate (ml/h at 10 mg/ml), total mg,
   and a 15-minute Cp/Ce chart with the target.
 - The PK models, exact solver and Shafer-Gregg controller are a port of NTF-Anaesthesia/anantf-site `apps/tci/src/engine`,
@@ -47,6 +47,10 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 - Induce sets Ce 3.5; Emerge sets every target to zero (propofol then falls by the model). Choosing another agent or a
   combination turns the pump off; manual depth works as before. The timeline saves and restores the pump; drug marks on the
   bar follow pump settings, not every step.
+- Default model Schnider (25 Nov 2026, the owner: emergence "way too slow", induction "on the slow side"). Measured on
+  /workshop/ with 10 min at Ce 3.5 then Emerge (40 y, 170 cm, 70 kg): Eleveld BIS < 60 at 143 s and BIS > 80 at 648 s;
+  Schnider 74 s and 230 s; Marsh 167 s and 530 s. Eleveld's slow ke0 (0.146/min) drives both; the EEG follows the pump's Ce
+  at once. All four cases use Schnider; Eleveld and Marsh stay in the menu.
 - Speed (25 Nov 2026, the owner's "9x doesn't speed up the induction"): the pump steps in sim time, so it already scaled
   (time to BIS < 60 after a Ce 6 µg/ml target: 116 s at 1x, 13 s wall at 9x). What feels slow is Eleveld's own effect site
   (arterial ke0 0.146/min, t1/2 about 4.7 min): in Ce mode the pump overshoots the plasma (a target of 6.3 in a 40-year-old,
@@ -78,7 +82,7 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 - Captions (QA pass, 25 Nov 2026): outside the quiz the teaching caption always shows, masked or not, without a step count
   in a case; Reveal and Blind redraw it. In a quiz case no caption and no step count show at all; the answer card lists the
   captions so far under "What happened". A rewind on the timeline, the pump's Reset and the blank case clear the caption.
-- `tci` Propofol TCI (Eleveld, Ce 4 then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
+- `tci` Propofol TCI (Schnider, Ce 4 then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
   18-Hz activity and SEF95 rising), treatment (remifentanil 3 ng/ml, Ce 4), maintenance, emergence.
 - `sevo` Sevoflurane (end-tidal 2.4% induction, 1.8% maintenance, about 1 MAC at 45 years): the same phases.
 - `propket` Propofol + ketamine: maintenance, then ketamine on the pump's ketamine line (0.5 mg/kg bolus plus 0.5 mg/kg/h,

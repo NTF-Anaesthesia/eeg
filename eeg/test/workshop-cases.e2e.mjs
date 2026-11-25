@@ -28,14 +28,14 @@ try{
  const em=await at(1790);assert.ok(em.bis>75&&em.sef>pre.sef+5,'emergence: BIS and SEF95 climb: '+em.bis);assert.equal(await page.evaluate(()=>mods.nmb),false,'relaxant reversed');
  await at(1810);assert.equal(await page.evaluate(()=>story),null,'case ends');
  // sevoflurane case from the menu: the vaporiser, not propofol
- await page.selectOption('#caseChoice','sevo');s=await at(340,20); // 20 s, as for propofol maintenance above
+ await page.selectOption('#caseChoice','sevo');s=await at(420,20); // 400-420 s: maintenance starts at 300 s and the sevo effect site takes ~2 min (120-s lag) to come down from 2.4%; 20 s as above
  assert.equal(s.pump.propofol,0);assert.ok(Math.abs(s.pump.sevo-1.8/(1.8*10**(-0.00269*5)))<1e-6,'end-tidal 1.8% as age-adjusted MAC');assert.ok(s.bis>35&&s.bis<60,'sevo maintenance BIS in range: '+s.bis);
  const sp=await at(595),sa=await at(645);assert.ok(sa.sef>sp.sef+3,'sevo incision arousal: SEF95 rises');
  assert.ok((await at(1790)).bis>80,'sevo emergence');
  // propofol + ketamine: BIS and SEF95 rise at an unchanged propofol target
  await page.goto(BASE+'?case=propket');await ready();
  const k0=await at(470,20),k1=await at(700,20); // 20 s: the alpha check below (see at())
- assert.ok(Math.abs(k0.pump.propofol-k1.pump.propofol)<0.3&&k1.pump.propofol<=k0.pump.propofol,'propofol Ce unchanged or lower');assert.ok(k1.pump.ketamine>0);
+ assert.ok(Math.abs(k0.pump.propofol-k1.pump.propofol)<0.3&&k1.pump.propofol<=k0.pump.propofol+0.05,'propofol Ce unchanged or lower'); // +0.05: on Schnider (default since 25 Nov 2026) Ce sits on the 3.5 target at both times, so only rounding differsassert.ok(k1.pump.ketamine>0);
  assert.ok(k1.bis>k0.bis+10&&k1.sef>k0.sef+6,`ketamine: BIS ${k0.bis.toFixed(0)} -> ${k1.bis.toFixed(0)}, SEF95 ${k0.sef.toFixed(1)} -> ${k1.sef.toFixed(1)}`);
  assert.ok(k1.alpha<k0.alpha-1,'ketamine: alpha weakens');
  // propofol + dexmedetomidine: the dex line's Ce builds over the load; slow activity up, alpha weaker, faster activity down

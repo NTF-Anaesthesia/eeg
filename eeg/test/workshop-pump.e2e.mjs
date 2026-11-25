@@ -17,7 +17,7 @@ try{
  assert.ok(await page.locator('#pumpCtl').isVisible(),'pump panel shows');assert.ok(await page.locator('#presetSeg').isHidden(),'combination choices give way to the pump');
  let s=await st();assert.equal(s.on,true);assert.equal(s.drug,'mix');assert.equal(s.mode,'mix');assert.equal(s.ce,0);
  assert.equal(await page.inputValue('#agentChoice'),'tci','the select keeps showing the pump');
- // Eleveld, Ce target 4: max-rate induction, plasma overshoot, then Ce at target
+ // Schnider (the default since 25 Nov 2026), Ce target 4: max-rate induction, plasma overshoot, then Ce at target
  await page.locator('#pTgt').fill('4');await frame();
  await run(60);s=await st();
  assert.ok(s.cp>s.ce,'plasma leads the effect site during induction');assert.ok(s.ce>0.5&&s.ce<4,'Ce rising after 1 min: '+s.ce);
@@ -71,5 +71,5 @@ try{
  const bb=await page.locator('#pumpCtl').boundingBox();assert.ok(bb.x>=0&&bb.x+bb.width<=391,'pump panel fits a phone');
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no horizontal overflow');
  assert.deepEqual(errors,[]);
- console.log('PASS TCI pump: Eleveld Ce target drives the effect site; ketamine, sevoflurane (MAC), remifentanil; Emerge; timeline restore; Schnider Cp; manual mode kept');
+ console.log('PASS TCI pump: Schnider Ce target drives the effect site; ketamine, sevoflurane (MAC), remifentanil; Emerge; timeline restore; Schnider Cp; manual mode kept');
 }finally{await browser.close();}
