@@ -88,7 +88,10 @@ falls under 50 after about a minute of diathermy) → emergence with blinks → 
   (effect site) follows it with a first-order lag that is fast going up and slow coming down: `TAU_UP` = 12 s (a bolus)
   and `TAU_DOWN` = 120 s (waking takes a few minutes: BIS about 77 two minutes after stopping propofol from GA, above
   90 by five; real half-times are 2-3 min and longer after long infusions). Spectrum then glides to the effect-site state
-  with a further 8 s, BIS smooths over 10/15/30 s; 4x/10x speed shortens it. Descriptions, the relaxant, the
+  with a further 8 s, BIS smooths over 10/15/30 s. Every lag is in sim seconds and the same at any playback speed, so 9x
+  plays the same induction 9 times as fast (owner, 25 Nov 2026: "9x doesn't speed up the induction"; this replaced a
+  30 Oct 2026 rule that slowed the rise to 60 s above 1x, which made Induce only about 3.4x faster at 9x;
+  `test/speed.e2e.mjs`). Descriptions, the relaxant, the
   out-of-target alarm and the stimulus follow `de`, not the target. A drug change or a switch between one drug and the mix
   snaps `de`; the story's first step and `snap()` jump it. The **Emergence** key stops every drug (slider to 0, or the mix
   cleared) and shows the wake-up in the caption.

@@ -100,10 +100,11 @@ function profile(p,f,spEnv,spF,kg,ks,wa){
 // EEG over a minute or two (the DSA 'unzips' from one pattern to the next) instead of at once. Real propofol and sevoflurane
 // effect-site half-times are about 2-3 min. Induction is a bolus and quick (12 s here); emergence is slow (120 s here, so a
 // patient takes a few minutes to wake and the DSA unzips back); speed 4x or 10x shortens both.
-// Fast-forward (owner, 30 Oct 2026): at speed above 1x the rise uses a real induction's pace (60 s, about 3 min to settle),
-// so the sped-up DSA shows the induction as a gradual slope over minutes, not a step.
-const TAU_UP=12,TAU_UP_FF=60,TAU_DOWN=120;
-const tauUp=()=>speed>1?TAU_UP_FF:TAU_UP;
+// Every lag here is in sim seconds and the same at any speed, so 9x plays an induction 9 times as fast (owner, 25 Nov 2026:
+// "9x doesn't speed up the induction"). This replaces the 30 Oct 2026 rule that slowed the rise to 60 s above 1x, which made
+// Induce only about 3.4x faster at 9x. A gradual induction comes from the TCI pump's own PK (Eleveld ke0) instead.
+const TAU_UP=12,TAU_DOWN=120;
+const tauUp=()=>TAU_UP;
 // case length (owner, 14 Oct 2026): the effect site empties more slowly after a long case, drug by drug (context-sensitive half-time).
 // Time constant = TAU_DOWN x (1 + (L-1) x CSENS): L 1 short, 2.5 medium, 5 long; remifentanil and N2O do not accumulate.
 const CASEL={short:1,medium:2.5,long:5},CSENS={propofol:0.9,sevo:0.5,ketamine:0.4,dex:0.9,remi:0,n2o:0};
@@ -538,7 +539,7 @@ function showPop(){const d=$('depth').value/100,el=$('tgtPop');if(masked()){el.h
 $('depth').addEventListener('pointerdown',()=>{popDown=true;showPop();});
 addEventListener('pointerup',()=>{if(popDown){popDown=false;clearTimeout(popT);popT=setTimeout(()=>{$('tgtPop').hidden=true;},1100);}});
 $('depth').addEventListener('blur',()=>{popDown=false;$('tgtPop').hidden=true;});
-$('depth').oninput=e=>{stopStory();depth=e.target.value/100;applyTarget();showPop();};
+$('depth').oninput=e=>{stopStory();$('storyCap').textContent='';depth=e.target.value/100;applyTarget();showPop();};
 $('mElder').onchange=e=>{mods.elderly=e.target.checked;applyTarget();};
 $('mEmg').onchange=e=>{mods.emg=e.target.checked;applyTarget();};
 // muscle relaxant (owner, 14 Oct 2026: on by default): 'auto' gives it at induction and reverses it at emergence, so the
