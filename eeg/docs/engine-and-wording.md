@@ -122,6 +122,33 @@ BC, zone) sit in the strip under it; "Teaching layout" in Display is the earlier
 most checks). `HIST` holds 60 min of columns. (The BIS Advance and SedLine screens, with ASYM and PSi, have since been built: see their sections below.)
 
 
+## Signal realism (25 Nov 2026)
+
+The EEG used to be too tidy: steady sinusoids, so every second looked like the last. The engine now makes it the way
+real frontal EEG looks under anaesthesia, keeping each drug's pattern and the index ranges above.
+
+- **Shaped noise.** Five streams (background, slow, alpha, spindle, fast) are drawn each second as 2-s blocks with a
+  fixed size and a random phase per frequency bin, then overlap-added. A Gaussian size per bin was tried first: it
+  made the smoothed index scatter more than before (sd 2.9 vs 2.5 at Ce 4), so the size is fixed.
+- **Slow drift.** Each band's amplitude drifts a little (about 0.25 dB, Ornstein-Uhlenbeck, 30 s), all bands
+  together about 0.35 dB over minutes (brightness only, band ratios unchanged), and the alpha and theta peaks wander
+  about 0.15 Hz. Kept small so the index wanders no more than before.
+- **Slow-wave shape and alpha coupling.** Slow waves are skewed (sharper troughs). Alpha rides the slow wave: strongest
+  at the slow-wave trough during sedation, at the peak under deeper GA (Purdon 2013 PNAS; Mukamel 2014 J Neurosci).
+- **Burst suppression.** Burst length is lognormal (median 1.55 s, 0.4–6 s). A burst after suppression opens with a
+  sharp wave, mostly negative, and is largest at its start; suppression is near flat (0.4% of the signal, plus the
+  electrode noise), as Lean Lyn asked ("some parts can flatline a bit"). Amzica 2009; Westover 2013.
+- **Awake artefacts.** Short facial EMG bursts (0.3–1.5 s every 8–30 s) and slow movement swings every 40–120 s; the
+  swings go through the eye channel so blink rejection handles them as it would a real monitor.
+- **Electrode noise.** A small slow random wander (0.25 µV, 0.4 s) plus white noise.
+- **Alpha dropout.** The stimulus now dips alpha by 4.5 dB in the profile; with the noise this measures about 3.4 dB
+  over 8–13 Hz (3.5 dB measured only 2.7 and was lost in the noise in about 1 run in 8).
+- **Cost.** Cheaper than the oscillators: in node 2.3 vs 4.9 µs per sample; in Chromium at 4× CPU throttle on the
+  workshop page at 60×, script time 46% vs 56% of the main thread, full 60× held.
+- **Not yet realistic:** the Advance DSA renderer still averages 10 s per column, so it looks smoother than the raw;
+  no mains hum or ECG bleed; no epileptiform sevo spikes; the slow-alpha balance still comes from the keyframes, not
+  from fitted recordings (VitalDB not used yet).
+
 ## Lessons
 
 - `fit()` reads each canvas's logical height once (`c._lh`): setting `canvas.height` rewrites the `height` attribute,

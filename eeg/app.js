@@ -1,7 +1,6 @@
 // BIS to DSA teaching simulator (eeg/NOTES.md). Synthetic EEG -> FFT -> DSA columns -> a teaching BIS estimate.
 // ===== EEG engine (shared with page) =====
 const FS=128, NWIN=256, HOP=128, DF=FS/NWIN; // 0.5 Hz bins
-const OSC_F=[]; for(let f=0.5;f<=47;f+=0.5) OSC_F.push(f);
 function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
 // spectral profile parameters (power units ~ uV^2 per 0.5 Hz bin)
 const KEYS=['bg','slow','delta','theta','thetaF','alpha','alphaF','beta','betaF','betaW','gamma','spindle','emg','bs','ar'];
@@ -22,7 +21,7 @@ const DRUGS={
  sevo:[[0,AWAKE],
   [0.15,S({bg:2.5,slow:2,delta:1,beta:7,betaF:17,gamma:1,alpha:1,thetaF:5})],
   [0.32,S({bg:6,slow:25,delta:8,theta:3,thetaF:5,alpha:14,alphaF:11.5,beta:5,betaF:15,gamma:0.6})],
-  [0.55,S({bg:7,slow:90,delta:20,theta:22,thetaF:5,alpha:82,alphaF:10,beta:0.8,betaF:15,gamma:0.1})],
+  [0.55,S({bg:7,slow:90,delta:20,theta:22,thetaF:5,alpha:92,alphaF:10,beta:0.8,betaF:15,gamma:0.1})],
   [0.75,S({bg:7,slow:150,delta:45,theta:40,thetaF:5,alpha:30,alphaF:9,beta:0.4})],
   [0.88,S({bg:7,slow:150,delta:40,theta:25,thetaF:5,alpha:15,alphaF:8.5,beta:0.2,bs:0.4})],
   [1,S({bg:7,slow:150,delta:40,theta:20,thetaF:5,alpha:10,alphaF:8.5,bs:0.6})]],
@@ -88,14 +87,35 @@ function target(drug,d,mods){mods=mods||{};
  return p;
 }
 // forced-air warmer: broadband 30-47 Hz pickup (Hemmerling & Fortier 2002); Engine.wa is its amplitude (power wa²)
-const WARM=6,AMP_EVERY=8;
-function profile(p,f,spEnv,spF,kg,ks,wa){
+const WARM=6;
+// The spectral profile (power per 0.5 Hz bin at f) in five parts, each made as its own noise stream (Engine.blk): the steady
+// background (1/f, delta, theta, arousal beta, facial EMG, warmer), the slow oscillation, alpha, spindles and the fast
+// beta/gamma. Slow and fast are scaled in time by the ketamine alternation, spindles by their burst envelope.
+function profileParts(p,f,spF,wa,o){
  const g=(c,w)=>Math.exp(-((f-c)**2)/(2*w*w));
- let P=p.bg/(0.6+f)*3+p.ar*g(18,4)+(wa?wa*wa*WARM*cl((f-28)/4):0);
- P+=p.slow*ks*g(0.75,0.45)+p.delta*g(2.5,1)+p.theta*g(p.thetaF,1)+p.alpha*g(p.alphaF,1.1)
-   +p.spindle*spEnv*g(spF,1.0)+kg*(p.beta*g(p.betaF,p.betaW)+p.gamma*g(34,5))+p.emg*(f>18?Math.min(1,(f-18)/15):0);
- return P;
+ o[0]=p.bg/(0.6+f)*3+p.ar*g(18,4)+(wa?wa*wa*WARM*cl((f-28)/4):0)+p.delta*g(2.5,1)+p.theta*g(p.thetaF,1)+p.emg*(f>18?Math.min(1,(f-18)/15):0);
+ o[1]=p.slow*g(0.75,0.45);o[2]=p.alpha*g(p.alphaF,1.1);o[3]=p.spindle*g(spF,1.0);o[4]=p.beta*g(p.betaF,p.betaW)+p.gamma*g(34,5);
+ return o;
 }
+function profile(p,f,spEnv,spF,kg,ks,wa){const o=profileParts(p,f,spF,wa,[0,0,0,0,0]);return o[0]+ks*o[1]+o[2]+spEnv*o[3]+kg*o[4];} // the whole profile
+// ===== Shaped-noise generator (25 Nov 2026; replaced 95 fixed sinusoids, which looked too tidy) =====
+// Each stream is Gaussian noise with the profile's spectrum: every second a 2-s block of random complex amplitudes
+// (Rayleigh magnitude, random phase) is inverse-transformed, windowed (sqrt-Hann) and overlap-added, so amplitude and phase
+// wander as in real EEG and each DSA bin scatters like a real periodogram. Two streams share one FFT (real and imaginary
+// parts). Slow drifts (Ornstein-Uhlenbeck, in log amplitude) move each band's power by about ±1.5 dB over 10-30 s and the
+// alpha and theta peaks by a few tenths of a Hz, as real anaesthetic EEG does from minute to minute.
+const SN=256,SH=128,SB=94,NSTR=5; // block, hop, bins 0.5..47 Hz, streams: 0 base, 1 slow, 2 alpha, 3 spindle, 4 fast
+const SWIN=Float64Array.from({length:SN},(_,i)=>Math.sin(Math.PI*(i+0.5)/SN)); // w(n)^2 + w(n+SH)^2 = 1
+const SCAL=1.25; // variance per bin = SCAL x profile: the old oscillators' level (their amplitude wobble added ~10%) plus 0.6 dB, because
+// noisier spectra lower the mean of the DSA's dB values; this keeps the DSA colours as bright as before
+const DRIFT={sd:0.03,tau:30,gsd:0.04,gtau:120,fsd:0.15,ftau:40}; // log-amplitude drift: all bands together ~0.35 dB over minutes (brightness only: band
+// ratios and so the index are unchanged), each band on its own ~0.25 dB; alpha/theta peak drift sd 0.15 Hz. Kept small so the
+// index wanders no more than before (10-s means sd ~2.3) and an alpha dropout (-4.5 dB) and slower trends (dex, ketamine) still stand out.
+const SKEW=0.2;
+// each bin gets a fixed size and a random phase per block (random-phase noise). Gaussian sizes made the smoothed index
+// scatter more than the old engine (sd 2.9 vs 2.5 at Ce 4); overlapping blocks still give a Gaussian-looking trace.
+const SQ2=Math.SQRT2; // slow-wave shape: sharper, deeper troughs (down states) than crests; moves ~7% of the slow power to its harmonics
+const BURST={med:1.55,sdl:0.5,gain:1.3}; // burst length lognormal: median 1.55 s (mean ~1.75 s, as the forecast assumes), bursts 1.3x louder
 // Effect site: the dose the brain 'feels' follows the target dose with a first-order lag, so moving the slider changes the
 // EEG over a minute or two (the DSA 'unzips' from one pattern to the next) instead of at once. Real propofol and sevoflurane
 // effect-site half-times are about 2-3 min. Induction is a bolus and quick (12 s here); emergence is slow (120 s here, so a
@@ -118,11 +138,32 @@ function inducedDepth(drug,d){
  if(drug==='mix')return Math.max(0.155*d.propofol+sevoDepth(d.sevo),d.ketamine/1.5);
  return 0;}
 class Engine{
- constructor(){this.ph=OSC_F.map(()=>Math.random()*6.283);this.m=OSC_F.map(()=>1);this.p=target('propofol',0);
+ constructor(){this.p=target('propofol',0);
   this.t=0;this.spT=1;this.spOn=false;this.spD=1;this.spF=12;this.kT=3;this.kPh=0;this.kg=1;this.ks=1;this.bsState=0;this.bsTimer=1;this.gate=1;this.drug='propofol';this.d=0;this.mods={};this.diT=0;this.diOn=false;this.nmbT=0;this.nmbS=0;this.tone=1;this.diAcc=0;this.artAcc=0;this.tail=0;this.tailV=0;
-  this.wa=0;this.stT=0;this.stK='';this.blT=2;this.blA=0;this.blP=1;this.dr=0;this.eye=0;this.eyeK=0;this.de=0;this.nmbOn=false;this.amp=new Float64Array(OSC_F.length);this.ampN=0;}
+  this.wa=0;this.stT=0;this.stK='';this.blT=2;this.blA=0;this.blP=1;this.dr=0;this.eye=0;this.eyeK=0;this.de=0;this.nmbOn=false;
+  // noise streams (ready and carried halves, NSTR x SH), drift states, burst onset wave, electrode noise, awake EMG and movement
+  this.rd=new Float64Array(NSTR*SH);this.tl=new Float64Array(NSTR*SH);this.si=SH;this.ssd=1;this.dz=new Float64Array(NSTR);this.dg=new Float64Array(NSTR).fill(1);
+  this.gz=0;this.fz=0;this.tz=0;this.ow=0;this.bt=9;this.owT=0.4;this.owA=0;this.en=0;this.mbT=10;this.mbOn=false;this.mbD=1;this.mbA=0;this.mbR=0;this.mvT=60;this.mvP=1;this.mvD=2;this.mvA=0;}
+ // a new 1-s hop of every noise stream from the current profile (two streams per FFT; see SN above)
+ blk(){const p=this.p,re=this._re||(this._re=new Float64Array(SN)),im=this._im||(this._im=new Float64Array(SN)),o=[0,0,0,0,0],A=this._a||(this._a=new Float64Array(NSTR*(SB+1)));
+  const q=Object.assign({},p);q.alphaF+=DRIFT.fsd*this.fz;q.thetaF+=0.8*DRIFT.fsd*this.tz;let vs=0;
+  for(let k=1;k<=SB;k++){profileParts(q,k*DF,this.spF,this.wa,o);for(let s=0;s<NSTR;s++)A[s*(SB+1)+k]=Math.sqrt(SCAL*Math.max(0,o[s]))/2;vs+=SCAL*o[1];}
+  this.ssd=Math.sqrt(vs)+1e-6;
+  for(let s0=0;s0<NSTR;s0+=2){const s1=s0+1;re.fill(0);im.fill(0);
+   for(let k=1;k<=SB;k++){const a=A[s0*(SB+1)+k],b=s1<NSTR?A[s1*(SB+1)+k]:0,t1=6.283185307179586*Math.random(),t2=6.283185307179586*Math.random(),
+     g1=SQ2*Math.cos(t1),g2=SQ2*Math.sin(t1),g3=SQ2*Math.cos(t2),g4=SQ2*Math.sin(t2);
+    re[k]=a*g1-b*g4;im[k]=a*g2+b*g3;re[SN-k]=a*g1+b*g4;im[SN-k]=-a*g2+b*g3;}
+   fft(re,im);
+   for(const [s,v] of [[s0,re],[s1,im]]){if(s>=NSTR)continue;const o0=s*SH;
+    for(let n=0;n<SH;n++){this.rd[o0+n]=this.tl[o0+n]+v[n]*SWIN[n];this.tl[o0+n]=v[n+SH]*SWIN[n+SH];}}}}
+ // slow drifts (Ornstein-Uhlenbeck, exact step h s): each band's log amplitude, a shared one, the alpha and theta peak
+ drift(h){const a=Math.exp(-h/DRIFT.tau),b=Math.sqrt(1-a*a),ag=Math.exp(-h/DRIFT.gtau),bg=Math.sqrt(1-ag*ag),af=Math.exp(-h/DRIFT.ftau),bf=Math.sqrt(1-af*af);
+  this.gz=this.gz*ag+bg*randn();this.fz=this.fz*af+bf*randn();this.tz=this.tz*af+bf*randn();
+  const sd=DRIFT.sd,gs=DRIFT.gsd,G=gs*this.gz-gs*gs;
+  for(let s=0;s<NSTR;s++){this.dz[s]=this.dz[s]*a+b*randn();this.dg[s]=Math.exp(sd*this.dz[s]-sd*sd+G);}}
  setTarget(drug,d,mods){if(drug!==this.drug||typeof d!==typeof this.d||this.de===0&&!this.deSet)this.de=cloneD(d);this.deSet=true;this.drug=drug;this.d=d;this.mods=mods||{};}
- snap(){this.de=cloneD(this.d);this.updNmb();this.p=target(this.drug,this.de,this.mods);this.wa=this.mods.warmer?1:0;this.eyeK=this.eyeT(this.p,this.mods.nmbK??(this.mods.nmb?1:0));this.ampN=0;} // jump instantly
+ snap(){this.de=cloneD(this.d);this.updNmb();this.p=target(this.drug,this.de,this.mods);this.wa=this.mods.warmer?1:0;this.eyeK=this.eyeT(this.p,this.mods.nmbK??(this.mods.nmb?1:0));
+  this.tl.fill(0);this.blk();this.blk();this.si=0;} // jump instantly (two hops so the streams start at full, steady level)
  // muscle relaxant given at induction (nmbMode 'auto'), always ('on') or never ('off'); sets mods.nmb, which target() reads.
  // Only when the page set a mode: the Node checks drive mods.nmb directly.
  updNmb(){const m=this.mods;if(!m.nmbMode||m.nmbK!==undefined)return; // the page's block model (nm) sets nmbK for the live engine
@@ -143,9 +184,9 @@ class Engine{
   this.updNmb();
   const tg=target(this.drug,this.de,m); const k=dt/8; // ~8 s time constant: the spectrum glides to the effect-site state
   // surgical stimulus (García 2021, Hight 2019), blunted by remifentanil b = remi/4 (mix only): light (dH < 0.5) beta at
-  // 18 Hz and facial EMG; deeper the alpha band dips 3.5 dB, or 1 in 10 a paradoxical delta arousal (BIS falls)
+  // 18 Hz and facial EMG; deeper the alpha band dips 4.5 dB (3.4 dB measured over 8-13 Hz; 3.5 dB was lost in the shaped noise), or 1 in 10 a paradoxical delta arousal (BIS falls)
   if(this.stT>0){this.stT-=dt;const u=1-(this.drug==='mix'?cl((this.de.remi||0)/4):0),dh=tg.dH??this.de;
-   if(this.stK==='beta'||this.stK!=='alpha'&&this.stK!=='delta'&&dh<0.5){tg.ar+=8*u;if(!m.nmb)tg.emg=Math.max(tg.emg,6*u);}else if(this.stK==='delta'){tg.delta*=1+u;tg.beta*=1-0.5*u;}else tg.alpha*=10**(-0.35*u);}
+   if(this.stK==='beta'||this.stK!=='alpha'&&this.stK!=='delta'&&dh<0.5){tg.ar+=8*u;if(!m.nmb)tg.emg=Math.max(tg.emg,6*u);}else if(this.stK==='delta'){tg.delta*=1+u;tg.beta*=1-0.5*u;}else tg.alpha*=10**(-0.45*u);}
   for(const key of KEYS)this.p[key]+=(tg[key]-this.p[key])*k;
   // relaxant stage 2: starts 60 s after the relaxant, only while the hypnotic is light; τ 120 s on, 30 s off
   if(m.nmb){this.nmbT+=dt;if(this.nmbT>60&&(tg.dH??this.de)<0.3)this.nmbS+=(1-this.nmbS)*dt/120;}else{this.nmbT=0;this.nmbS-=this.nmbS*dt/30;}
@@ -161,31 +202,47 @@ class Engine{
   // ketamine anaesthesia: gamma bursts alternate with slow-delta every 2-5 s (Akeju 2016)
   this.kT-=dt;if(this.kT<=0){this.kPh^=1;this.kT=2+3*Math.random();}
   const kOn=tg.kS>0.5;this.kg+=((kOn&&!this.kPh?0.3:1)-this.kg)*0.02;this.ks+=((kOn&&this.kPh?0.5:1)-this.ks)*0.02;
-  // burst suppression gate
-  // burst suppression gate: bursts 0.5-3 s; flat runs 1-3 s at bs 0.5 growing to 10-30 s at bs 1; isoelectric above 0.97
-  this.bsTimer-=dt; if(this.bsTimer<=0){const b=this.p.bs;
+  // burst suppression gate: bursts lognormal (median 1.55 s, 0.4-6 s); flat runs 1-3 s at bs 0.5 growing to 10-30 s at bs 1;
+  // isoelectric above 0.97. A burst opens fast (tau ~30 ms) with a sharp onset wave and is louder than the continuous EEG
+  // around it, then fades over ~150 ms into a near-flat line (under 1 uV) (Amzica 2009; Westover 2013).
+  this.bsTimer-=dt; if(this.bsTimer<=0){const b=this.p.bs,was=this.bsState;
    if(b>0.97){this.bsState=1;this.bsTimer=1;}
    else if(this.bsState===0&&Math.random()<b){this.bsState=1;this.bsTimer=10**(2*Math.max(0,b-0.5))*(1+2*Math.random());}
-   else{this.bsState=0;this.bsTimer=0.5+2.5*Math.random();}}
-  const gTarget=this.bsState?0.03:1; this.gate+=(gTarget-this.gate)*0.08;
-  // oscillator amplitudes from the spectral profile: the profile glides over seconds, so it is refreshed every AMP_EVERY
-  // samples (16 Hz) instead of every sample, which was most of the page's CPU
-  if(--this.ampN<=0){this.ampN=AMP_EVERY;for(let i=0;i<OSC_F.length;i++)this.amp[i]=Math.sqrt(2*profile(this.p,OSC_F[i],spEnv,this.spF,this.kg,this.ks,this.wa));}
-  let x=0;
-  for(let i=0;i<OSC_F.length;i++){const f=OSC_F[i];
-   this.m[i]+= (1-this.m[i])*0.004+(Math.random()-0.5)*0.104; if(this.m[i]<0.05)this.m[i]=0.05;
-   this.ph[i]+=6.2832*f*dt+(Math.random()-0.5)*0.277;
-   x+=this.amp[i]*this.m[i]*Math.sin(this.ph[i]);
-  }
+   else{this.bsState=0;this.bsTimer=Math.min(6,Math.max(0.4,BURST.med*Math.exp(BURST.sdl*randn())));
+    if(was&&b>0.05){this.ow=1e-9;this.bt=0;this.owT=0.25+0.25*Math.random();this.owA=(Math.random()<0.75?-1:1)*(3+2*Math.random());}}}
+  // a burst starts loudest and settles over ~0.6 s
+  this.bt+=dt;const gB=(1+(BURST.gain-1)*cl(this.p.bs/0.3))*(1+0.5*cl(this.p.bs/0.3)*Math.exp(-this.bt/0.6)),gTarget=this.bsState?0.004:gB;
+  this.gate+=(gTarget-this.gate)*(gTarget>this.gate?0.25:0.05);
+  // noise streams (blk) and slow drifts (every 16 samples)
+  if(this.si>=SH){this.blk();this.si=0;} const i=this.si++,R=this.rd,D=this.dg; if((i&15)===0)this.drift(16*dt);
+  // slow oscillation: skewed (sharper troughs), and alpha rides on it: on the troughs at sedation depths ("trough-max") and
+  // on the crests under GA ("peak-max"; Purdon 2013, Mukamel 2014). Both keep the band's mean power.
+  const ss=this.ssd,s0=R[SH+i],z=s0/ss,dH=tg.dH??(typeof de==='number'?de:0);
+  const sl=(s0-SKEW*(z*s0-ss))/Math.sqrt(1+2*SKEW*SKEW);
+  const c=0.5*cl((dH-0.38)/0.12)-0.4*cl(1-Math.abs(dH-0.3)/0.1),am=Math.max(0,1+c*Math.max(-2.5,Math.min(2.5,z)))/Math.sqrt(1+c*c);
+  let x=R[i]*D[0]+sl*Math.sqrt(this.ks)*D[1]+R[2*SH+i]*am*D[2]+R[3*SH+i]*Math.sqrt(spEnv)*D[3]+R[4*SH+i]*Math.sqrt(this.kg)*D[4];
+  if(this.ow>0){const u=this.ow/this.owT;x+=this.owA*ss*Math.sin(2*Math.PI*u)*(1-u);this.ow+=dt;if(this.ow>=this.owT)this.ow=0;}
+  // amplifier and electrode noise: a gently wandering floor of about 0.3 uV, so suppression reads as a flat line (a workshop
+  // colleague, 25 Nov 2026: "the suppression line should be a bit flatter")
+  this.en+=-this.en*dt/0.4+0.25*randn()*Math.sqrt(2*dt/0.4);
   const emgNoise=this.p.emg>0?randn()*Math.sqrt(this.p.emg)*1.2:0;
-  let y=x*this.gate+emgNoise+randn()*0.6;
+  let y=x*this.gate+emgNoise+randn()*0.15+this.en;
+  // awake facial EMG bursts (frowning, swallowing, talking): 0.3-1.5 s of broadband muscle noise every 8-30 s, gone under
+  // a relaxant or once asleep (they follow the eye-movement share)
+  if(this.eyeK>0.05){this.mbT-=dt;if(this.mbT<=0){this.mbOn=!this.mbOn;if(this.mbOn){this.mbD=this.mbT=0.3+1.2*Math.random();this.mbA=4+6*Math.random();}else this.mbT=8+22*Math.random();}
+   if(this.mbOn){const r=randn();y+=Math.min(1,2*this.eyeK)*this.mbA*Math.sin(Math.PI*(1-this.mbT/this.mbD))**2*(r-this.mbR)*0.71;this.mbR=r;}}
+  else this.mbOn=false;
   // blinks and eye movement (frontal sensor): one-sided 300-ms deflections of about 150 uV every 2-6 s (1 in 12 over
   // 300 uV, which trips the artefact flag) plus a slow drift under 1 Hz. An awake patient with eyes open does this on its own
   // (eyeK, smaller and never over 300 uV): delta-theta power along the bottom of the DSA, so awake is not all blue (owner's
   // colleague, 19 Oct 2026). It fades as the patient goes under (gone by depth 0.2) and stops under a relaxant.
   const eT=this.eyeT(tg,nk);this.eyeK+=(eT-this.eyeK)*dt/(eT>this.eyeK?2:6);
   if(this.eyeK>0.01){const ek=this.eyeK;this.blT-=dt;if(this.blT<=0){this.blT=2+4*Math.random();this.blP=0;this.blA=m.blink&&Math.random()<1/12?310+60*Math.random():110+80*Math.random();}
-   this.dr+=-this.dr*dt/0.8+12*randn()*Math.sqrt(2*dt/0.8);this.eye=ek*this.dr;if(this.blP<0.3){this.eye+=ek*this.blA*Math.sin(Math.PI*this.blP/0.3)**2;this.blP+=dt;}y+=this.eye;}
+   this.dr+=-this.dr*dt/0.8+12*randn()*Math.sqrt(2*dt/0.8);this.eye=ek*this.dr;if(this.blP<0.3){this.eye+=ek*this.blA*Math.sin(Math.PI*this.blP/0.3)**2;this.blP+=dt;}
+   // head or sensor movement: a slow 1.5-2.5 s swing of 80-180 uV every 40-120 s while awake (rejected like a blink)
+   this.mvT-=dt;if(this.mvT<=0){this.mvT=40+80*Math.random();this.mvP=0;this.mvD=1.5+Math.random();this.mvA=(Math.random()<.5?-1:1)*(80+100*Math.random());}
+   if(this.mvP<this.mvD){this.eye+=Math.min(1,2*ek)*this.mvA*Math.sin(Math.PI*this.mvP/this.mvD)**2;this.mvP+=dt;}
+   y+=this.eye;}
   else this.dr=this.eye=0;
   // diathermy: 1-2.5 s bursts of broadband interference clipping at ±400 uV, 4-8 s apart, each followed by a 1-s
   // settling tail (a decaying offset); burst and tail samples are counted as artefact (diAcc, artAcc; step() reads them)
