@@ -54,7 +54,7 @@ try{
  await page.click('#wakeBtn');await frame();s=await st();assert.equal(await page.evaluate(()=>PUMP.target),0);assert.equal(s.mix.remi,0);assert.equal(await page.evaluate(()=>PUMP.k.inf+PUMP.x.inf),0,'Emerge stops the add-on infusions');
  const ceA=s.ce;await run(300);s=await st();assert.ok(s.ce<ceA*0.85,`Ce falls after the pump stops (${ceA} -> ${s.ce})`);assert.equal(s.r,0);
  // Induce in pump mode sets a propofol target
- await page.click('#induceBtn');assert.equal(await page.evaluate(()=>PUMP.target),3.5);
+ await page.click('#induceBtn');assert.equal(await page.evaluate(()=>PUMP.target),6,'Induce: Ce 6 for laryngoscopy (then 3.5, workshop-flow)');
  // Reset unlocks the patient; Schnider on a Cp target
  await page.click('#pReset');assert.ok(await page.locator('#pAge').isEnabled());await page.selectOption('#pModel','schnider');
  await page.click('#pModeSeg button[data-m=Cp]');await page.locator('#pTgt').fill('3');await run(120);s=await st();

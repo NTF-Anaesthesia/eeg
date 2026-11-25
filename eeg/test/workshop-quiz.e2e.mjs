@@ -26,7 +26,8 @@ try{
  await answer({phase:1,agent:0,arousal:0});
  assert.match(await page.textContent('#quizTitle'),/3 of 3/);
  const hb=await page.evaluate(()=>({shown:$('quizBis').textContent,bis:Math.round(COLS.at(-1).bis)}));assert.equal(hb.shown,String(hb.bis),'answer shows the hidden BIS');
- assert.ok(+hb.shown>=38&&+hb.shown<=60,'maintenance BIS in range: '+hb.shown);assert.match(await page.textContent('.quiz-note'),/propofol pattern/);
+ // one 15-s reading at Ce 4 (mean about 43, sd about 2.4): 38 failed 1 run in 10, so 35 (25 Nov 2026)
+ assert.ok(+hb.shown>=35&&+hb.shown<=60,'maintenance BIS in range: '+hb.shown);assert.match(await page.textContent('.quiz-note'),/propofol pattern/);
  assert.equal(await page.evaluate(()=>masked()),true,'still masked on the monitor');
  await page.click('#quizNext');assert.equal(await page.evaluate(()=>paused),false,'Continue resumes the case');assert.ok(await page.locator('#quizCard').isHidden());
  // checkpoint 2 (incision arousal): one wrong

@@ -50,5 +50,14 @@ function wsRow(){const st=workspace.querySelector('.screens');if(!st)return;
 addEventListener('resize',wsRow);addEventListener('load',wsRow);document.addEventListener('fullscreenchange',()=>setTimeout(wsRow,50));
 new MutationObserver(()=>setTimeout(wsRow,0)).observe(workspace,{attributes:true,attributeFilter:['class']});
 if(window.ResizeObserver)new ResizeObserver(wsRow).observe($('wsStrip')||workspace);wsRow();
+// The page opens with an empty trend and DSA too (a case resets it at its own start)
+if(!story?.case){ADV.booted=true;wsTrendStart();}
+// Auto-pause after Emerge (owner, 25 Nov 2026): once the index is back to about 95 the sim pauses with a caption. A new target,
+// sevoflurane, a case or Induce cancels it. The masked index still counts (the pause gives nothing away the caption does not).
+const WS_AWAKE=90; // the sim's awake index sits at 90-93 (the owner asked for about 95, which it never reaches)
+let wsWake=false;
+$('wakeBtn').addEventListener('click',()=>{wsWake=true;});$('induceBtn').addEventListener('click',()=>{wsWake=false;});
+setInterval(()=>{if(!wsWake)return;if(story||PUMP.on&&(PUMP.target>0||PUMP.sevoEt>0)){wsWake=false;return;}
+ if(!paused&&bisS!=null&&bisS>=WS_AWAKE){wsWake=false;$('pause').click();$('storyCap').textContent='Paused: the patient is awake (index back to about 90). Press play to carry on.';}},250);
 // Home screen app: the workshop page's own service worker (scope ./ = /workshop/ only) keeps the page working if the venue Wi-Fi drops
 if('serviceWorker' in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(()=>{}));

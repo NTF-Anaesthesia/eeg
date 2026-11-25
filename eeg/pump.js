@@ -88,7 +88,10 @@ const SEVO_MAC40=1.8,sevoMacAge=age=>SEVO_MAC40*10**(-0.00269*(age-40)); // Nick
 const kdxLine=()=>({s:[0,0,0,0],inf:0,left:0,rate:0,n:0,tot:0,m:null});
 // default model Schnider (owner, 25 Nov 2026): Eleveld's slow ke0 (0.146/min) made induction take ~2.4 min to BIS < 60 and
 // emergence ~11 min to BIS 80 after 10 min at Ce 3.5; Schnider (ke0 0.456/min) gives ~75 s and ~4 min. Eleveld stays selectable.
-const PUMP={on:false,model:'schnider',mode:'Ce',pt:{sex:'M',age:40,height:170,weight:70},target:0,sevoEt:0,remi:0,
+// opioid: "Opioid on board", on by default (owner, 25 Nov 2026: "assume that there's always some opioids involved"); the cases
+// turn it off because they script their own remifentanil. next: a timed target change still to come (Induce: Ce 6, then 3.5).
+const PUMP_OPIOID=true;
+const PUMP={on:false,model:'schnider',mode:'Ce',pt:{sex:'M',age:40,height:170,weight:70},target:0,sevoEt:0,remi:0,opioid:PUMP_OPIOID,next:null,
  s:[0,0,0,0],r:0,kind:'off',acc:0,mg:0,hist:[],m:null,k:kdxLine(),x:kdxLine()};
 const KET_D={v1:0.063,k10:0.4381,k12:0.5921,k13:0.590,k21:0.247,k31:0.0146,ke0:0.5}; // Domino 1984 (per kg), ke0 assumed
 function ketDomino(p){const D=KET_D,v1=D.v1*p.weight,cl2=D.k12*v1,cl3=D.k13*v1;return {v1,v2:cl2/D.k21,v3:cl3/D.k31,cl1:D.k10*v1,cl2,cl3,ke0:D.ke0};}
@@ -108,10 +111,12 @@ const pumpSevoMac=()=>PUMP.sevoEt/sevoMacAge(PUMP.pt.age);
 // put the pump's levels into the drug mix; propofol Ce also straight into both effect sites (the model's ke0 is the lag)
 function pumpApply(){if(!PUMP.on)return;const ce=pumpCe();
  mix.propofol=Math.min(MIXMAX.propofol,ce);mix.sevo=Math.min(MIXMAX.sevo,pumpSevoMac());mix.remi=PUMP.remi;
- mix.ketamine=Math.min(1,kdxCe(PUMP.k)/KDX_SCALE);mix.dex=Math.min(1,kdxCe(PUMP.x)/KDX_SCALE);
+ mix.opioid=PUMP.opioid?1:0;mix.ketamine=Math.min(1,kdxCe(PUMP.k)/KDX_SCALE);mix.dex=Math.min(1,kdxCe(PUMP.x)/KDX_SCALE);
  for(const e of [eng,R.eng])if(e.de&&typeof e.de==='object'){e.de.propofol=mix.propofol;e.de.ketamine=mix.ketamine;e.de.dex=mix.dex;}}
 // advance the pump by dt sim seconds: a new rate every update interval, exact PK in between
 function pumpStep(dt){if(!PUMP.on)return;let left=dt;
+ if(PUMP.next&&simT>=PUMP.next.at){const n=PUMP.next;PUMP.next=null;PUMP.target=n.target;PUMP.acc=0;pumpUI();
+  if(n.cap&&$('storyCap').textContent===n.was)$('storyCap').textContent=n.cap;}
  while(left>1e-9){if(PUMP.acc<=1e-9){const tg=PUMP.target,rMax=TCI_SET.maxMlH*TCI_SET.conc/60;
    const d=tciRate(PUMP.mode,PUMP.m,PUMP.s,tg,TCI_SET.updateSec/60,rMax,PUMP.mode==='Ce'?TCI_SET.cpMaxRatio*tg:undefined);PUMP.r=d.r;PUMP.kind=d.kind;PUMP.acc=TCI_SET.updateSec;}
   const h=Math.min(left,PUMP.acc);PUMP.s=tciStep(PUMP.m,PUMP.s,PUMP.r,h/60);PUMP.mg+=PUMP.r*h/60;PUMP.acc-=h;left-=h;}
@@ -120,9 +125,9 @@ function pumpStep(dt){if(!PUMP.on)return;let left=dt;
  pumpApply();}
 // timeline save points (timeline.js): the whole pump, so going back restores the infusion too
 const kdxSave=L=>Object.assign({},L,{s:L.s.slice(),m:null});
-function pumpSave(){return {on:PUMP.on,model:PUMP.model,mode:PUMP.mode,pt:Object.assign({},PUMP.pt),target:PUMP.target,sevoEt:PUMP.sevoEt,remi:PUMP.remi,s:PUMP.s.slice(),r:PUMP.r,kind:PUMP.kind,acc:PUMP.acc,mg:PUMP.mg,k:kdxSave(PUMP.k),x:kdxSave(PUMP.x)};}
-function pumpLoad(x){if(!x)return;Object.assign(PUMP,x,{pt:Object.assign({},x.pt),s:x.s.slice(),k:kdxSave(x.k||kdxLine()),x:kdxSave(x.x||kdxLine())});PUMP.hist=PUMP.hist.filter(h=>h.t<=simT);pumpModes();pumpApply();pumpUI();}
-const pumpKey=()=>[PUMP.model,PUMP.mode,PUMP.target,PUMP.sevoEt,PUMP.remi,PUMP.k.inf,PUMP.k.n,PUMP.x.inf,PUMP.x.n].join('|');
+function pumpSave(){return {on:PUMP.on,model:PUMP.model,mode:PUMP.mode,pt:Object.assign({},PUMP.pt),target:PUMP.target,sevoEt:PUMP.sevoEt,remi:PUMP.remi,opioid:PUMP.opioid,next:PUMP.next&&Object.assign({},PUMP.next),s:PUMP.s.slice(),r:PUMP.r,kind:PUMP.kind,acc:PUMP.acc,mg:PUMP.mg,k:kdxSave(PUMP.k),x:kdxSave(PUMP.x)};}
+function pumpLoad(x){if(!x)return;Object.assign(PUMP,x,{opioid:x.opioid??PUMP_OPIOID,next:x.next?Object.assign({},x.next):null,pt:Object.assign({},x.pt),s:x.s.slice(),k:kdxSave(x.k||kdxLine()),x:kdxSave(x.x||kdxLine())});PUMP.hist=PUMP.hist.filter(h=>h.t<=simT);pumpModes();pumpApply();pumpUI();}
+const pumpKey=()=>[PUMP.model,PUMP.mode,PUMP.target,PUMP.sevoEt,PUMP.remi,PUMP.opioid,PUMP.k.inf,PUMP.k.n,PUMP.x.inf,PUMP.x.n].join('|');
 
 // ----- panel -----
 const pumpBox=document.createElement('div');pumpBox.className='ctl pump';pumpBox.id='pumpCtl';pumpBox.hidden=true;
@@ -136,6 +141,7 @@ pumpBox.innerHTML=`<div class="pump-row pump-head"><b>TCI propofol</b>
  <label>cm <input id="pHt" type="number" min="140" max="210" step="1" value="170"></label>
  <label>kg <input id="pWt" type="number" min="40" max="160" step="1" value="70"></label></div>
 <label class="pump-row pump-slider"><span>Target <output id="pTgtV">0.0</output> µg/ml</span><input id="pTgt" type="range" min="0" max="8" step="0.1" value="0"></label>
+<div class="pump-row pump-check"><button type="button" id="pOpioid" class="pump-toggle" aria-pressed="true">Opioid on board</button><small>about remifentanil 2 ng/ml or fentanyl 2 µg/kg</small></div>
 <p class="pump-read" id="pRead" aria-live="off"></p>
 <canvas id="pChart" class="pump-chart" aria-label="Plasma and effect-site concentration over the last 15 minutes" role="img"></canvas>
 <div class="pump-line" id="pKetLine" role="group" aria-label="Ketamine"><div class="pump-row pump-head"><b>Ketamine</b><span class="pump-ce" id="pKetCe">Ce 0.00 µg/ml</span></div>
@@ -159,7 +165,7 @@ function pumpUI(){pumpBox.hidden=!PUMP.on;workspace.dataset.pump=PUMP.on?'on':'o
  $('pSex').value=PUMP.pt.sex;$('pAge').value=PUMP.pt.age;$('pHt').value=PUMP.pt.height;$('pWt').value=PUMP.pt.weight;
  const started=PUMP.mg>0;for(const id of ['pModel','pSex','pAge','pHt','pWt'])$(id).disabled=started;
  $('pPt').title=started?'Reset the pump to change the patient or model':'';
- $('pTgt').value=PUMP.target;$('pTgtV').textContent=pf(PUMP.target);
+ $('pOpioid').setAttribute('aria-pressed',String(!!PUMP.opioid));$('pTgt').value=PUMP.target;$('pTgtV').textContent=pf(PUMP.target);
  $('pSevo').value=PUMP.sevoEt;$('pSevoV').textContent=pf(PUMP.sevoEt);$('pMac').textContent=PUMP.sevoEt?`≈ ${(pumpSevoMac()).toFixed(2)} MAC`:'';
  if(PUMP.sevoEt||PUMP.remi)$('pMore').open=true; // a case or the timeline set them: show them
  $('pRemi').value=PUMP.remi;$('pRemiV').textContent=pf(PUMP.remi);
@@ -191,12 +197,12 @@ function pumpChart(){const cv=$('pChart'),w=cv.clientWidth,h=cv.clientHeight;if(
  line('tg','rgba(140,150,170,.9)',1,[4,3]);line('cp','#e0a040',1.2);line('ce','#3da5ff',2.2);
  c.fillStyle='#e0a040';c.fillText('Cp',w-44,10);c.fillStyle='#3da5ff';c.fillText('Ce',w-22,10);}
 // start: the drug-mix mode with every level at zero, the pump in charge of the mix
-function pumpStart(){stopStory();Object.assign(PUMP,{on:true,target:0,sevoEt:0,remi:0,s:[0,0,0,0],r:0,kind:'off',acc:0,mg:0,hist:[],k:kdxLine(),x:kdxLine()});pumpModes();
+function pumpStart(){stopStory();Object.assign(PUMP,{on:true,target:0,sevoEt:0,remi:0,opioid:PUMP_OPIOID,next:null,s:[0,0,0,0],r:0,kind:'off',acc:0,mg:0,hist:[],k:kdxLine(),x:kdxLine()});pumpModes();
  showMode('mix');drug='mix';Object.assign(mix,MIX0);depth=mix;applyTarget();pumpApply();pumpUI();if(paused)$('pause').click();}
 function pumpOff(){if(!PUMP.on)return;PUMP.on=false;pumpUI();}
 // fields: target, sevoEt, remi, mode, model; ketInf (mg/kg/h), ketBolus (mg/kg over 30 s), dexInf (µg/kg/h), dexLoad (µg/kg over 10 min)
-function pumpSet(o){if(!PUMP.on)pumpStart();for(const k of ['target','sevoEt','remi','mode','model'])if(o[k]!=null)PUMP[k]=o[k];
- if(o.model)pumpModes();if(o.target!=null)PUMP.acc=0; // a new target takes effect at once, as on a pump
+function pumpSet(o){if(!PUMP.on)pumpStart();for(const k of ['target','sevoEt','remi','mode','model','opioid'])if(o[k]!=null)PUMP[k]=o[k];
+ if(o.model)pumpModes();if(o.target!=null){PUMP.acc=0;PUMP.next=null;} // a new target takes effect at once, as on a pump, and replaces any timed one
  if(o.ketInf!=null)PUMP.k.inf=o.ketInf;if(o.dexInf!=null)PUMP.x.inf=o.dexInf;
  if(o.ketBolus)kdxGive(PUMP.k,o.ketBolus,0.5);if(o.dexLoad)kdxGive(PUMP.x,o.dexLoad,10);
  pumpApply();pumpUI();}
@@ -223,6 +229,8 @@ $('pKetGive').onclick=()=>{pumpAddOn();const el=$('pKetBol'),raw=+el.value,msg=$
 $('pDexGive').onclick=()=>{pumpAddOn();if(PUMP.x.left>1e-9){PUMP.x.left=0;pumpRead();return;} // Stop load
  const v=+$('pDexLoad').value;if(v>0&&v<=2)pumpSet({dexLoad:v});pumpRead();};
 $('pRemi').addEventListener('input',e=>{pumpManual();pumpSet({remi:+e.target.value});});
+// the opioid key (a toggle, 44 px for iPads) can be changed during a case without stopping it, like the add-on lines
+$('pOpioid').addEventListener('click',()=>{pumpAddOn();pumpSet({opioid:!PUMP.opioid});});
 // Emerge: every pump target to zero; the predicted levels then fall by the model (propofol) and the engine's lag (the rest)
 $('wakeBtn').addEventListener('click',()=>{if(PUMP.on){PUMP.k.left=PUMP.x.left=0;pumpSet({target:0,sevoEt:0,remi:0,ketInf:0,dexInf:0});}});
 // any other agent, a preset combination or a lesson turns the pump off

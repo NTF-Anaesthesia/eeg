@@ -22,6 +22,9 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Workshop flow (25 Nov 2026; `docs/workshop.md`): Induce Ce 6 then 3.5 (BIS into the 20s for laryngoscopy), "Opioid on
+  board" box (default on), empty trend and DSA at the start, auto-pause after Emerge at index 90, whole raw trace redrawn
+  above 1x when the state moves. New suite `workshop-flow.e2e.mjs`.
 - Pump default Schnider (25 Nov 2026; `docs/workshop.md`): Eleveld made emergence about 11 min to BIS 80 and induction
   about 2.4 min to BIS < 60; Schnider about 4 min and 75 s. All four cases switched; Eleveld and Marsh still selectable.
 - Workshop quiz hardening (25 Nov 2026, after an independent QA pass; `docs/workshop.md`): no captions or step count in a

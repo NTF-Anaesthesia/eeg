@@ -55,7 +55,13 @@ depthGroup.append($('mixCtl'));panel.prepend(depthGroup,transport,actions);
 $('monitorChoice').addEventListener('change',e=>{applySkin(e.target.value,true);if(e.target.value==='advance'){advBootEnd();ADV.win=5;advRelayout();}syncDemoControls();});
 agent.addEventListener('change',e=>{stopStory();if(e.target.value==='tci'){pumpStart();}else if(e.target.value==='mix'){if(typeof pumpOff==='function')pumpOff();showMode('mix');drug='mix';depth=mix;selectMix(selectedMix,selectedMixVariant);if(paused)pause.click();}else setDrug(e.target.value);syncDemoControls();});
 $('playSpeed').addEventListener('input',e=>{window.speedPicked=true;setSpeed(+e.target.value);syncPlayback();});
-$('induceBtn').addEventListener('click',()=>{stopStory();if(typeof PUMP!=='undefined'&&PUMP.on){pumpSet({target:3.5});}else if(mode==='mix'){selectMix(selectedMix,selectedMixVariant);}else{depth=.57;$('depth').value=57;}applyTarget();if(paused)pause.click();$('storyCap').textContent='Induction: watch the raw EEG and DSA evolve towards the selected target.';syncPlayback();});
+// Induce with the pump: deep and fast for laryngoscopy (owner, 25 Nov 2026: "we need to get very deep very fast initially for the
+// laryngoscopy"): effect-site target 6 µg/ml, then 3.5 for maintenance 150 sim s later: BIS dips into the 20s for a minute or so (owner, 25 Nov 2026:
+// "induction should produce a bit of like 20s initially"), then settles in the 40s
+const INDUCE_CAP='Induction: effect-site target 6 µg/ml so the patient is deep for laryngoscopy; the target drops to 3.5 µg/ml after 2½ minutes.';
+$('induceBtn').addEventListener('click',()=>{stopStory();const tci=typeof PUMP!=='undefined'&&PUMP.on;if(tci){pumpSet({target:6});}else if(mode==='mix'){selectMix(selectedMix,selectedMixVariant);}else{depth=.57;$('depth').value=57;}applyTarget();if(paused)pause.click();
+ $('storyCap').textContent=tci?INDUCE_CAP:'Induction: watch the raw EEG and DSA evolve towards the selected target.';
+ if(tci)PUMP.next={at:simT+150,target:3.5,was:INDUCE_CAP,cap:'Maintenance: target down to 3.5 µg/ml after laryngoscopy. Watch the alpha and slow-delta bands settle.'};syncPlayback();});
 channels.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ADV.ch=+b.dataset.ch;ADV.hemi='L';ADV.review=null;ADV.sensor=null;ADV.dlg=null;ADV.menu=false;ADV.pop=null;ADV.hc=null;ADV.chartKey=null;advRelayout();advOv();dirty=true;syncDemoControls();}));
 
 function syncPlayback(){
