@@ -1,6 +1,6 @@
 // Built-in TCI pump (workshop, 25 Nov 2026): a compact propofol target-controlled infusion whose predicted effect-site
-// concentration drives the simulator's propofol level live, with optional sevoflurane (end-tidal %), ketamine (relative
-// effect) and remifentanil (ng/ml). Loaded after demo.js, before workshop.js; reads and sets app.js globals.
+// concentration drives the simulator's propofol level live, with add-on ketamine and dexmedetomidine lines (bolus or loading
+// dose plus an infusion, each with its own PK model) and optional sevoflurane (end-tidal %) and remifentanil (ng/ml). Loaded after demo.js, before workshop.js; reads and sets app.js globals.
 //
 // Credit: the PK models, the exact solver and the controller are a JavaScript port of the TCI emulator in
 // NTF-Anaesthesia/anantf-site, apps/tci/src/engine (models.ts, patient.ts, solver.ts, tci.ts), by the same
@@ -15,8 +15,19 @@
 //
 // How it meets the engine: each step the pump's predicted propofol Ce becomes the propofol level in the drug mix
 // (app.js mixTarget, µg/ml) and is written straight into both engines' effect site, so the PK-PD model's own ke0
-// replaces the engine's generic lag for propofol. Sevoflurane, ketamine and remifentanil are set as mix targets and follow
-// the engine's effect-site lag and drug rules (including the remifentanil blunting of a surgical stimulus).
+// replaces the engine's generic lag for propofol. Ketamine and dexmedetomidine Ce go the same way after a mapping onto the
+// engine's relative 0-1 scales (KDX_SCALE below). Sevoflurane and remifentanil are set as mix targets and follow the engine's
+// effect-site lag and drug rules (including the remifentanil blunting of a surgical stimulus).
+//
+// Add-on lines (25 Nov 2026, a workshop colleague's request): manual bolus / loading dose and infusion, not TCI.
+//  - Ketamine (racemic): Domino EF et al., Clin Pharmacol Ther 1984;36:645-53, 3-compartment parameters as used for ketamine
+//    TCI (Absalom AR et al., Br J Anaesth 2007;98:615-23): V1 0.063 L/kg, k10 0.4381, k12 0.5921, k13 0.590, k21 0.247,
+//    k31 0.0146 /min. Domino has no ke0; 0.5 /min (t1/2 ke0 about 1.4 min, a quick onset as seen clinically) is our assumption.
+//  - Dexmedetomidine: Hannivoort LN et al., Anesthesiology 2015;123:357-67, weight-scaled: V1 1.78, V2 30.3, V3 52.0 L x (W/70);
+//    CL 0.686 x (W/70)^0.75, Q2 2.98 x (V2/30.3)^0.75, Q3 0.602 x (V3/52)^0.75 L/min. ke0 0.12 /min (t1/2 ke0 about 6 min,
+//    the slow onset of dex sedation) is our assumption.
+//  - Bolus over 30 s; dex loading dose over 10 min. Engine level = min(1, Ce / 2): 1.0 at 2 µg/ml ketamine or 2 ng/ml dex.
+//    A teaching approximation (NOTES.md), not a concentration-effect model.
 
 // ----- patient and PK models (patient.ts, models.ts) -----
 const tciBmi=p=>p.weight/(p.height/100)**2;
@@ -72,27 +83,44 @@ function tciRate(mode,m,s,target,dt,rMax,cpMax){
 // Settings as in the emulator's defaults: 10 mg/ml, 800 ml/h maximum, a new rate every 10 s, plasma overshoot cap 4 x target.
 const TCI_SET={conc:10,maxMlH:800,updateSec:10,cpMaxRatio:4};
 const SEVO_MAC40=1.8,sevoMacAge=age=>SEVO_MAC40*10**(-0.00269*(age-40)); // Nickalls & Mapleson 2003
-const PUMP={on:false,model:'eleveld',mode:'Ce',pt:{sex:'M',age:40,height:170,weight:70},target:0,sevoEt:0,ket:0,remi:0,
- s:[0,0,0,0],r:0,kind:'off',acc:0,mg:0,hist:[],m:null};
-function pumpModes(){PUMP.m=tciModes(TCI_MODELS[PUMP.model][1](PUMP.pt));}
+// an add-on line: modal state s, infusion inf (per kg per hour), a bolus or loading dose still running (left, at rate per min),
+// n doses given, total given
+const kdxLine=()=>({s:[0,0,0,0],inf:0,left:0,rate:0,n:0,tot:0,m:null});
+const PUMP={on:false,model:'eleveld',mode:'Ce',pt:{sex:'M',age:40,height:170,weight:70},target:0,sevoEt:0,remi:0,
+ s:[0,0,0,0],r:0,kind:'off',acc:0,mg:0,hist:[],m:null,k:kdxLine(),x:kdxLine()};
+const KET_D={v1:0.063,k10:0.4381,k12:0.5921,k13:0.590,k21:0.247,k31:0.0146,ke0:0.5}; // Domino 1984 (per kg), ke0 assumed
+function ketDomino(p){const D=KET_D,v1=D.v1*p.weight,cl2=D.k12*v1,cl3=D.k13*v1;return {v1,v2:cl2/D.k21,v3:cl3/D.k31,cl1:D.k10*v1,cl2,cl3,ke0:D.ke0};}
+function dexHannivoort(p){const f=p.weight/70,v2=30.3*f,v3=52.0*f; // Hannivoort 2015, ke0 assumed
+ return {v1:1.78*f,v2,v3,cl1:0.686*f**0.75,cl2:2.98*(v2/30.3)**0.75,cl3:0.602*(v3/52)**0.75,ke0:0.12};}
+const KDX_SCALE=2; // engine level 1.0 at Ce 2 (µg/ml ketamine, ng/ml dex)
+function pumpModes(){PUMP.m=tciModes(TCI_MODELS[PUMP.model][1](PUMP.pt));PUMP.k.m=tciModes(ketDomino(PUMP.pt));PUMP.x.m=tciModes(dexHannivoort(PUMP.pt));}
+// advance an add-on line by h sim seconds: infusion plus whatever is left of a bolus (split where the bolus ends)
+function kdxStep(L,h){while(h>1e-9){const b=L.left>1e-12?Math.min(h,L.left/L.rate*60):h,r=L.inf*PUMP.pt.weight/60+(L.left>1e-12?L.rate:0);
+  L.s=tciStep(L.m,L.s,r,b/60);L.tot+=r*b/60;if(L.left>1e-12)L.left=Math.max(0,L.left-L.rate*b/60);h-=b;}}
+const kdxCe=L=>Math.max(0,tciCe(L.m,L.s)),kdxCp=L=>Math.max(0,tciCp(L.m,L.s));
+// give a dose (mg or µg per kg) over min minutes
+function kdxGive(L,perKg,min){const d=perKg*PUMP.pt.weight;if(!(d>0))return;L.left+=d;L.rate=L.left/min;L.n++;}
 pumpModes();
 const pumpCe=()=>Math.max(0,tciCe(PUMP.m,PUMP.s)),pumpCp=()=>Math.max(0,tciCp(PUMP.m,PUMP.s));
 const pumpSevoMac=()=>PUMP.sevoEt/sevoMacAge(PUMP.pt.age);
 // put the pump's levels into the drug mix; propofol Ce also straight into both effect sites (the model's ke0 is the lag)
 function pumpApply(){if(!PUMP.on)return;const ce=pumpCe();
- mix.propofol=Math.min(MIXMAX.propofol,ce);mix.sevo=Math.min(MIXMAX.sevo,pumpSevoMac());mix.ketamine=PUMP.ket;mix.remi=PUMP.remi;
- for(const e of [eng,R.eng])if(e.de&&typeof e.de==='object')e.de.propofol=mix.propofol;}
+ mix.propofol=Math.min(MIXMAX.propofol,ce);mix.sevo=Math.min(MIXMAX.sevo,pumpSevoMac());mix.remi=PUMP.remi;
+ mix.ketamine=Math.min(1,kdxCe(PUMP.k)/KDX_SCALE);mix.dex=Math.min(1,kdxCe(PUMP.x)/KDX_SCALE);
+ for(const e of [eng,R.eng])if(e.de&&typeof e.de==='object'){e.de.propofol=mix.propofol;e.de.ketamine=mix.ketamine;e.de.dex=mix.dex;}}
 // advance the pump by dt sim seconds: a new rate every update interval, exact PK in between
 function pumpStep(dt){if(!PUMP.on)return;let left=dt;
  while(left>1e-9){if(PUMP.acc<=1e-9){const tg=PUMP.target,rMax=TCI_SET.maxMlH*TCI_SET.conc/60;
    const d=tciRate(PUMP.mode,PUMP.m,PUMP.s,tg,TCI_SET.updateSec/60,rMax,PUMP.mode==='Ce'?TCI_SET.cpMaxRatio*tg:undefined);PUMP.r=d.r;PUMP.kind=d.kind;PUMP.acc=TCI_SET.updateSec;}
   const h=Math.min(left,PUMP.acc);PUMP.s=tciStep(PUMP.m,PUMP.s,PUMP.r,h/60);PUMP.mg+=PUMP.r*h/60;PUMP.acc-=h;left-=h;}
- const H=PUMP.hist,last=H[H.length-1];if(!last||simT-last.t>=5){H.push({t:simT,cp:pumpCp(),ce:pumpCe(),tg:PUMP.target});if(H.length>2000)H.splice(0,H.length-2000);}
+ kdxStep(PUMP.k,dt);kdxStep(PUMP.x,dt);
+ const H=PUMP.hist,last=H[H.length-1];if(!last||simT-last.t>=5){H.push({t:simT,cp:pumpCp(),ce:pumpCe(),tg:PUMP.target,ke:kdxCe(PUMP.k),xe:kdxCe(PUMP.x)});if(H.length>2000)H.splice(0,H.length-2000);}
  pumpApply();}
 // timeline save points (timeline.js): the whole pump, so going back restores the infusion too
-function pumpSave(){return {on:PUMP.on,model:PUMP.model,mode:PUMP.mode,pt:Object.assign({},PUMP.pt),target:PUMP.target,sevoEt:PUMP.sevoEt,ket:PUMP.ket,remi:PUMP.remi,s:PUMP.s.slice(),r:PUMP.r,kind:PUMP.kind,acc:PUMP.acc,mg:PUMP.mg};}
-function pumpLoad(x){if(!x)return;Object.assign(PUMP,x,{pt:Object.assign({},x.pt),s:x.s.slice()});PUMP.hist=PUMP.hist.filter(h=>h.t<=simT);pumpModes();pumpApply();pumpUI();}
-const pumpKey=()=>[PUMP.model,PUMP.mode,PUMP.target,PUMP.sevoEt,PUMP.ket,PUMP.remi].join('|');
+const kdxSave=L=>Object.assign({},L,{s:L.s.slice(),m:null});
+function pumpSave(){return {on:PUMP.on,model:PUMP.model,mode:PUMP.mode,pt:Object.assign({},PUMP.pt),target:PUMP.target,sevoEt:PUMP.sevoEt,remi:PUMP.remi,s:PUMP.s.slice(),r:PUMP.r,kind:PUMP.kind,acc:PUMP.acc,mg:PUMP.mg,k:kdxSave(PUMP.k),x:kdxSave(PUMP.x)};}
+function pumpLoad(x){if(!x)return;Object.assign(PUMP,x,{pt:Object.assign({},x.pt),s:x.s.slice(),k:kdxSave(x.k||kdxLine()),x:kdxSave(x.x||kdxLine())});PUMP.hist=PUMP.hist.filter(h=>h.t<=simT);pumpModes();pumpApply();pumpUI();}
+const pumpKey=()=>[PUMP.model,PUMP.mode,PUMP.target,PUMP.sevoEt,PUMP.remi,PUMP.k.inf,PUMP.k.n,PUMP.x.inf,PUMP.x.n].join('|');
 
 // ----- panel -----
 const pumpBox=document.createElement('div');pumpBox.className='ctl pump';pumpBox.id='pumpCtl';pumpBox.hidden=true;
@@ -108,11 +136,18 @@ pumpBox.innerHTML=`<div class="pump-row pump-head"><b>TCI propofol</b>
 <label class="pump-row pump-slider"><span>Target <output id="pTgtV">0.0</output> µg/ml</span><input id="pTgt" type="range" min="0" max="8" step="0.1" value="0"></label>
 <p class="pump-read" id="pRead" aria-live="off"></p>
 <canvas id="pChart" class="pump-chart" aria-label="Plasma and effect-site concentration over the last 15 minutes" role="img"></canvas>
-<details class="pump-more" id="pMore"><summary>Sevoflurane, ketamine, remifentanil</summary>
+<div class="pump-line" id="pKetLine" role="group" aria-label="Ketamine"><div class="pump-row pump-head"><b>Ketamine</b><span class="pump-ce" id="pKetCe">Ce 0.00 µg/ml</span></div>
+ <div class="pump-row"><label>Bolus <input id="pKetBol" type="number" min="0.05" max="2" step="0.05" value="0.5"> mg/kg</label><button type="button" class="pump-give" id="pKetGive">Give</button></div>
+ <label class="pump-row pump-slider"><span>Infusion <output id="pKetInfV">0.00</output> mg/kg/h</span><input id="pKetInf" type="range" min="0" max="3" step="0.05" value="0"></label>
+ <canvas id="pKetChart" class="pump-chart small" aria-label="Ketamine effect-site concentration over the last 15 minutes" role="img"></canvas></div>
+<div class="pump-line" id="pDexLine" role="group" aria-label="Dexmedetomidine"><div class="pump-row pump-head"><b>Dexmedetomidine</b><span class="pump-ce" id="pDexCe">Ce 0.00 ng/ml</span></div>
+ <div class="pump-row"><label>Load <input id="pDexLoad" type="number" min="0.1" max="2" step="0.1" value="1"> µg/kg</label><button type="button" class="pump-give" id="pDexGive">Load over 10 min</button></div>
+ <label class="pump-row pump-slider"><span>Infusion <output id="pDexInfV">0.0</output> µg/kg/h</span><input id="pDexInf" type="range" min="0" max="1.5" step="0.1" value="0"></label>
+ <canvas id="pDexChart" class="pump-chart small" aria-label="Dexmedetomidine effect-site concentration over the last 15 minutes" role="img"></canvas></div>
+<details class="pump-more" id="pMore"><summary>Sevoflurane, remifentanil</summary>
  <label class="pump-row pump-slider"><span>Sevoflurane Et <output id="pSevoV">0.0</output> % <small id="pMac"></small></span><input id="pSevo" type="range" min="0" max="4" step="0.1" value="0"></label>
- <label class="pump-row pump-slider"><span>Ketamine <output id="pKetV">0</output> <small>relative effect, not a dose</small></span><input id="pKet" type="range" min="0" max="1" step="0.05" value="0"></label>
  <label class="pump-row pump-slider"><span>Remifentanil Ce <output id="pRemiV">0</output> ng/ml</span><input id="pRemi" type="range" min="0" max="8" step="0.5" value="0"></label></details>
-<p class="pump-note">Predicted concentrations from a population model, for teaching only. Sevoflurane MAC is age-adjusted; the brain follows the end-tidal value with a lag.</p>`;
+<p class="pump-note">Predicted concentrations from population models (ketamine: Domino; dexmedetomidine: Hannivoort), for teaching only, not for dosing. How strongly each Ce shows on the EEG is a teaching approximation. Sevoflurane MAC is age-adjusted; the brain follows the end-tidal value with a lag.</p>`;
 $('mixCtl').after(pumpBox);
 const agentSel=$('agentChoice');{const o=document.createElement('option');o.value='tci';o.textContent='TCI pump';agentSel.append(o);}
 const pf=n=>(Math.round(n*10)/10).toFixed(1);
@@ -123,11 +158,25 @@ function pumpUI(){pumpBox.hidden=!PUMP.on;workspace.dataset.pump=PUMP.on?'on':'o
  $('pPt').title=started?'Reset the pump to change the patient or model':'';
  $('pTgt').value=PUMP.target;$('pTgtV').textContent=pf(PUMP.target);
  $('pSevo').value=PUMP.sevoEt;$('pSevoV').textContent=pf(PUMP.sevoEt);$('pMac').textContent=PUMP.sevoEt?`≈ ${(pumpSevoMac()).toFixed(2)} MAC`:'';
- if(PUMP.sevoEt||PUMP.ket||PUMP.remi)$('pMore').open=true; // a case or the timeline set them: show them
- $('pKet').value=PUMP.ket;$('pKetV').textContent=PUMP.ket.toFixed(2);$('pRemi').value=PUMP.remi;$('pRemiV').textContent=pf(PUMP.remi);
+ if(PUMP.sevoEt||PUMP.remi)$('pMore').open=true; // a case or the timeline set them: show them
+ $('pRemi').value=PUMP.remi;$('pRemiV').textContent=pf(PUMP.remi);
+ $('pKetInf').value=PUMP.k.inf;$('pKetInfV').textContent=PUMP.k.inf.toFixed(2);$('pDexInf').value=PUMP.x.inf;$('pDexInfV').textContent=pf(PUMP.x.inf);
  pumpRead();}
 function pumpRead(){if(!PUMP.on)return;const mlh=PUMP.r*60/TCI_SET.conc;
- $('pRead').textContent=`Cp ${pf(pumpCp())} · Ce ${pf(pumpCe())} µg/ml · ${Math.round(mlh)} ml/h · ${Math.round(PUMP.mg)} mg`;pumpChart();}
+ $('pRead').textContent=`Cp ${pf(pumpCp())} · Ce ${pf(pumpCe())} µg/ml · ${Math.round(mlh)} ml/h · ${Math.round(PUMP.mg)} mg`;pumpChart();
+ const kl=PUMP.k,xl=PUMP.x,run=L=>L.left>1e-9?` · ${L===kl?'bolus':'loading'} running`:'';
+ $('pKetCe').textContent=`Ce ${kdxCe(kl).toFixed(2)} µg/ml · ${Math.round(kl.tot)} mg${run(kl)}`;
+ $('pDexCe').textContent=`Ce ${kdxCe(xl).toFixed(2)} ng/ml · ${Math.round(xl.tot)} µg${run(xl)}`;
+ kdxChart('pKetChart','ke','#e07ad0','µg/ml');kdxChart('pDexChart','xe','#7ad0a0','ng/ml');}
+// one add-on drug's predicted Ce over the last 15 minutes
+function kdxChart(id,k,col,u){const cv=$(id),w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;const dpr=Math.min(2,devicePixelRatio||1);
+ if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+ const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+ const span=900,t0=simT-span,H=PUMP.hist.filter(p=>p.t>=t0&&p[k]!=null),top=Math.max(1,...H.map(p=>p[k]))*1.15;
+ const X=t=>2+(t-t0)/span*(w-4),Y=v=>h-3-v/top*(h-14);
+ c.font='10px system-ui,sans-serif';c.fillStyle='rgba(120,140,170,.9)';c.fillText(`${top<2?top.toFixed(1):Math.round(top)} ${u} · 15 min`,4,10);
+ if(H.length<2)return;c.beginPath();H.forEach((p,i)=>{const y=Y(p[k]);i?c.lineTo(X(p.t),y):c.moveTo(X(p.t),y);});c.strokeStyle=col;c.lineWidth=2;c.stroke();
+ c.fillStyle=col;c.fillText('Ce',w-22,10);}
 function pumpChart(){const cv=$('pChart'),w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;const dpr=Math.min(2,devicePixelRatio||1);
  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
@@ -138,11 +187,14 @@ function pumpChart(){const cv=$('pChart'),w=cv.clientWidth,h=cv.clientHeight;if(
  line('tg','rgba(140,150,170,.9)',1,[4,3]);line('cp','#e0a040',1.2);line('ce','#3da5ff',2.2);
  c.fillStyle='#e0a040';c.fillText('Cp',w-44,10);c.fillStyle='#3da5ff';c.fillText('Ce',w-22,10);}
 // start: the drug-mix mode with every level at zero, the pump in charge of the mix
-function pumpStart(){stopStory();Object.assign(PUMP,{on:true,target:0,sevoEt:0,ket:0,remi:0,s:[0,0,0,0],r:0,kind:'off',acc:0,mg:0,hist:[]});pumpModes();
+function pumpStart(){stopStory();Object.assign(PUMP,{on:true,target:0,sevoEt:0,remi:0,s:[0,0,0,0],r:0,kind:'off',acc:0,mg:0,hist:[],k:kdxLine(),x:kdxLine()});pumpModes();
  showMode('mix');drug='mix';Object.assign(mix,MIX0);depth=mix;applyTarget();pumpApply();pumpUI();if(paused)$('pause').click();}
 function pumpOff(){if(!PUMP.on)return;PUMP.on=false;pumpUI();}
-function pumpSet(o){if(!PUMP.on)pumpStart();for(const k of ['target','sevoEt','ket','remi','mode','model'])if(o[k]!=null)PUMP[k]=o[k];
+// fields: target, sevoEt, remi, mode, model; ketInf (mg/kg/h), ketBolus (mg/kg over 30 s), dexInf (µg/kg/h), dexLoad (µg/kg over 10 min)
+function pumpSet(o){if(!PUMP.on)pumpStart();for(const k of ['target','sevoEt','remi','mode','model'])if(o[k]!=null)PUMP[k]=o[k];
  if(o.model)pumpModes();if(o.target!=null)PUMP.acc=0; // a new target takes effect at once, as on a pump
+ if(o.ketInf!=null)PUMP.k.inf=o.ketInf;if(o.dexInf!=null)PUMP.x.inf=o.dexInf;
+ if(o.ketBolus)kdxGive(PUMP.k,o.ketBolus,0.5);if(o.dexLoad)kdxGive(PUMP.x,o.dexLoad,10);
  pumpApply();pumpUI();}
 pumpBox.querySelector('#pModeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){PUMP.mode=b.dataset.m;PUMP.acc=0;pumpUI();}});
 $('pModel').onchange=e=>{PUMP.model=e.target.value;pumpModes();pumpUI();};
@@ -152,10 +204,14 @@ for(const id of ['pSex','pAge','pHt','pWt'])$(id).addEventListener('change',()=>
 $('pReset').onclick=()=>pumpStart();
 $('pTgt').addEventListener('input',e=>{stopStory();pumpSet({target:+e.target.value});});
 $('pSevo').addEventListener('input',e=>{stopStory();pumpSet({sevoEt:+e.target.value});});
-$('pKet').addEventListener('input',e=>{stopStory();pumpSet({ket:+e.target.value});});
+// the add-on lines can be used during a case without stopping it (giving ketamine or dex on top of the case's propofol)
+$('pKetInf').addEventListener('input',e=>pumpSet({ketInf:+e.target.value}));
+$('pDexInf').addEventListener('input',e=>pumpSet({dexInf:+e.target.value}));
+$('pKetGive').onclick=()=>{const v=+$('pKetBol').value;if(v>0&&v<=2)pumpSet({ketBolus:v});pumpRead();};
+$('pDexGive').onclick=()=>{const v=+$('pDexLoad').value;if(v>0&&v<=2)pumpSet({dexLoad:v});pumpRead();};
 $('pRemi').addEventListener('input',e=>{stopStory();pumpSet({remi:+e.target.value});});
 // Emerge: every pump target to zero; the predicted levels then fall by the model (propofol) and the engine's lag (the rest)
-$('wakeBtn').addEventListener('click',()=>{if(PUMP.on)pumpSet({target:0,sevoEt:0,ket:0,remi:0});});
+$('wakeBtn').addEventListener('click',()=>{if(PUMP.on){PUMP.k.left=PUMP.x.left=0;pumpSet({target:0,sevoEt:0,remi:0,ketInf:0,dexInf:0});}});
 // any other agent, a preset combination or a lesson turns the pump off
 for(const name of ['setDrug','selectMix']){const f=window[name];window[name]=function(...a){pumpOff();return f.apply(this,a);};}
 setInterval(pumpRead,500);

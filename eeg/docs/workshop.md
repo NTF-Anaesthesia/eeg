@@ -1,7 +1,8 @@
-# Workshop tools (blinded reading, TCI pump, case files, quiz)
+# Workshop tools (blinded reading, TCI pump, case files, quiz, workshop page)
 
 Part of the BIS to DSA / processed EEG notes. Index: [../NOTES.md](../NOTES.md). Added 25 Nov 2026 for a workshop segment on
-reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js`, `cases.js`, `quiz.js`, `workshop.css`; the index masking lives in each skin.
+reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js`, `cases.js`, `quiz.js`, `workshop.css`, and for the `/workshop/` page `workshop/index.html`,
+`ws-monitor.js`, `ws-page.css`; the index masking lives in each skin.
 
 ## Blinded mode (`?blind=1`)
 
@@ -27,8 +28,20 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   cap 4 x target). Checked against the TypeScript engine: identical Cp and Ce for Eleveld, Schnider (Ce) and Marsh (Cp) runs.
 - Into the engine: the predicted propofol Ce is the mix's propofol level (µg/ml, `mixTarget`) and is written straight into both
   engines' effect site, so the model's ke0 is the only propofol lag. Sevoflurane end-tidal % becomes MAC by age (MAC40 1.8%,
-  Nickalls & Mapleson 2003) and, with ketamine (relative 0-1, not a dose) and remifentanil (ng/ml), is set as a mix target that
-  follows the engine's own effect-site lag and rules (remifentanil blunts the stimulus response).
+  Nickalls & Mapleson 2003) and, with remifentanil (ng/ml), is set as a mix target that follows the engine's own effect-site
+  lag and rules (remifentanil blunts the stimulus response).
+- Add-on lines, always shown under the propofol line and usable during a case (25 Nov 2026, a workshop colleague's request):
+  - **Ketamine**: a bolus in mg/kg (given over 30 s) plus an infusion in mg/kg/h. PK: Domino EF et al., Clin Pharmacol Ther
+    1984;36:645-53, as tabulated in Absalom et al. 2007 (V1 0.063 L/kg; k10 0.4381, k12 0.5921, k13 0.590, k21 0.247,
+    k31 0.0146 /min). ke0 0.5/min is our assumption (the model has none).
+  - **Dexmedetomidine**: an optional load in µg/kg over 10 min plus an infusion in µg/kg/h. PK: Hannivoort LN et al.,
+    Anesthesiology 2015;123:357-67 (V1 1.78, V2 30.3, V3 52.0 L x W/70; CL 0.686 x (W/70)^0.75 L/min; Q2 2.98, Q3 0.602
+    L/min, allometric). ke0 0.12/min is our assumption.
+  - Each line shows its Ce, the total given and a 15-minute Ce chart. Same exact 3-compartment solver as the propofol models.
+  - Into the engine (a teaching approximation, not a validated concentration-effect model): engine level = min(1, Ce / 2),
+    so 2 µg/ml ketamine or 2 ng/ml dexmedetomidine is the engine's full single-drug signature. The level is the mix's
+    ketamine or dex and is written straight into both engines' effect site, so the PK ke0 is the only lag.
+  - Emerge stops both infusions and any dose still running. A 2 mg/kg ketamine bolus peaks near 5.5 µg/ml (level capped at 1).
 - Induce sets Ce 3.5; Emerge sets every target to zero (propofol then falls by the model). Choosing another agent or a
   combination turns the pump off; manual depth works as before. The timeline saves and restores the pump; drug marks on the
   bar follow pump settings, not every step.
@@ -50,8 +63,11 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 - `tci` Propofol TCI (Eleveld, Ce 4 then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
   18-Hz activity and SEF95 rising), treatment (remifentanil 3 ng/ml, Ce 4), maintenance, emergence.
 - `sevo` Sevoflurane (end-tidal 2.4% induction, 1.8% maintenance, about 1 MAC at 45 years): the same phases.
-- `propket` Propofol + ketamine: maintenance, then ketamine (relative 0.6) at an unchanged propofol target raises BIS (about 45
-  to 60-65) and SEF95 and weakens alpha; it wears off over minutes before emergence.
+- `propket` Propofol + ketamine: maintenance, then ketamine on the pump's ketamine line (0.5 mg/kg bolus plus 0.5 mg/kg/h,
+  stopped later) at an unchanged propofol target raises BIS and SEF95 and weakens alpha; it wears off before emergence.
+- `propdex` Propofol + dexmedetomidine (Ce 3.5, then 2.5 µg/ml): dex 1 µg/kg over 10 min plus 0.5 µg/kg/h; slow activity and
+  spindles build and alpha weakens over the load; the propofol target is lowered, then everything stops for emergence.
+- In both combination cases the propofol TCI line stays live, and the ketamine and dex lines can be changed during the case.
 - Expected directions (checked by `test/workshop-cases.e2e.mjs`): maintenance BIS 40-60; incision alpha dip, then SEF95 and BIS
   up; treatment brings them back; ketamine raises BIS and SEF95 with weaker alpha; emergence BIS above 75-80.
 - The arousal patterns are the engine's existing stimulus rules, a teaching approximation; the cases are synthetic, not timings
@@ -62,9 +78,10 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 - The **Quiz** key in the case strip (or `&quiz=1`) runs the chosen case blinded, with the pump panel and the anaesthetic
   choice hidden. At each checkpoint (three a case, in `QUIZ`) the case pauses and a card asks: depth or phase (awake or
   lightly sedated / general anaesthesia / too deep / lightening or emerging), most likely agent (propofol / sevoflurane /
-  propofol with ketamine) and whether an arousal response is present. Check answers marks each, shows the hidden BIS and SEF95
+  propofol with ketamine / propofol with dexmedetomidine) and whether an arousal response is present. Check answers marks each, shows the hidden BIS and SEF95
   and a teaching note; Continue resumes. The case ends with "You scored n of 9" and Play again. Turning the quiz on mid-case
-  restarts the case; checkpoints the timeline jumps past are skipped (the latest is asked).
+  restarts the case; checkpoints the timeline jumps past are skipped (the latest is asked). After Check answers the pump
+  panel (all three drug lines) shows until Continue.
 - Teaching notes are general and hedged in the page's style: DSA patterns are clues, not tests; the arousal sequence is not
   specific; a high index with ketamine need not mean emergence. Propofol and sevoflurane are told apart only by the theta clue.
 - `?workshop=1` adds a header row to the strip: NTFGH and NUHS as text name badges (full names on hover), and the session
@@ -74,3 +91,23 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   - `https://eeg.anantf.com/?workshop=1&case=tci&quiz=1` (blinded propofol TCI case with the quiz)
   - `https://eeg.anantf.com/?case=propket&blind=1` (blinded, no quiz); `?case=sevo&quiz=1`
 - Test: `test/workshop-quiz.e2e.mjs`.
+
+## Workshop page (`/workshop/`, 25 Nov 2026)
+
+- eeg.anantf.com/workshop/ (`workshop/index.html`, generated from the main page's monitor section): the same engine, pump,
+  cases and quiz, with no device look. The owner's brief: "custom built for the workshop, it shouldn't have any device
+  branding". No device names, logos, bezels, menu clones, skin picker or trademark signs; the number is "the index"
+  (processed EEG index), never BIS or PSi. Inside this repo so engine fixes reach both pages; the main page is unchanged
+  (its inline style moved to `page.css`, same rules).
+- One generic dark monitor (`ws-monitor.js`, skin `ws`): 0-30 Hz DSA with the white SEF95 line (last 5 min), the raw EEG
+  at real time (`DSIG`, 4 s across a phone, 8 s wider, ±100 µV), an SEF95 / SQI / EMG / SR row and the index, masked by
+  default (Reveal; `?blind=0` opens unmasked). Unilateral or Bilateral (`?bi=1`): the right hemisphere is app.js's second
+  engine; two DSA panels, two traces, L and R numbers.
+- Always on: the NTFGH and NUHS text banners and the session title, the case picker, the Quiz key and the pump panel (on from
+  the start). The teaching sections, agent and depth controls, notes column and device options are hidden. Case captions and
+  quiz notes say "the index".
+- Full screen (projector, 1920x1080): the case strip stays, the monitor fills the left, the controls and pump scroll on the
+  right. Phone: one column.
+- Links: `https://eeg.anantf.com/workshop/?case=propket&bi=1`, `?case=propdex&quiz=1`, `?case=tci&quiz=1`.
+- Test: `test/workshop-page.e2e.mjs` (no brand text in the DOM, masked index and Reveal, bilateral, case and quiz, ketamine
+  bolus raises Ce, projector and phone).

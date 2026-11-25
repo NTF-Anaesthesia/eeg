@@ -1,0 +1,86 @@
+/* The unbranded workshop page (workshop/index.html, 25 Nov 2026): the generic monitor (ws-monitor.js) and what the page hides
+   from the shared main-page markup. Light page, dark screen, as on the main page. */
+.ws-page .wrap{padding-top:14px}
+.ws-page .apptitle span{color:var(--muted)}
+/* not on this page: the device screens, the teaching readout strip, manual drug choice, depth slider, presets, the scripted demo */
+.ws-page #classicWrap,.ws-page #advWrap,.ws-page #sedWrap,.ws-page #pvWrap,.ws-page #vistaWrap,.ws-page #vMenu,.ws-page #keySeg,
+.ws-page #teachStrip,.ws-page #monitorChoice,.ws-page #advanceChannels,.ws-page #mixCtl,.ws-page #depthCtl,.ws-page #displayOptions,
+.ws-page .reading,.ws-page #storyBtn,.ws-page #observationNotes,.ws-page #learningButton,.ws-page .depth-head,.ws-page #revealBtn,.ws-page #mixTeaching,.ws-page #mixObservation{display:none!important}
+.ws-foot{margin:28px 0 12px;font-size:13px;color:var(--muted)}
+/* the monitor */
+.wsmon{background:#0b0f16;border:1px solid #273142;border-radius:10px;padding:8px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:6px;color:#e8eef8;
+ font:500 13px/1.25 system-ui,-apple-system,"Segoe UI",sans-serif;min-width:0;height:min(76vh,640px);min-height:380px;box-sizing:border-box}
+.wsm-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.wsm-name{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:#9fb0c8;margin-right:auto}
+.wsm-seg{display:inline-flex}
+.wsm-seg button,.wsm-reveal{min-height:36px;padding:4px 12px;border:1px solid #3a4558;background:#161d29;color:#e8eef8;font:600 13px/1 system-ui,sans-serif;cursor:pointer}
+.wsm-seg button:first-child{border-radius:6px 0 0 6px}.wsm-seg button:last-child{border-radius:0 6px 6px 0;border-left:0}
+.wsm-seg button[aria-pressed=true]{background:#d9e4f5;color:#05080d;border-color:#d9e4f5}
+.wsm-reveal{border-radius:6px;background:#2a2030;border-color:#6b4e70}
+.wsm-reveal[aria-pressed=true]{background:#e8d9f0;color:#120a16}
+.wsm-clock{font:600 13px/1 ui-monospace,"JetBrains Mono",monospace;color:#9fb0c8;font-variant-numeric:tabular-nums}
+.wsm-body{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;min-height:0}
+.wsm-side{display:grid;grid-template-rows:auto 1fr;gap:6px;min-width:0}
+.wsm-idx{display:grid;gap:2px;padding:6px 10px;border:1px solid #273142;border-radius:6px;background:#04060a;align-content:start}
+.wsm-idx .k,.wsm-row .k{font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#8a97ad}
+.wsm-idx>b{font:700 64px/1 ui-monospace,"JetBrains Mono",monospace;font-variant-numeric:tabular-nums;color:#fff}
+.wsm-idx>b.masked{color:#6b7890;letter-spacing:.05em}
+.wsm-idx2{font:700 16px/1.2 ui-monospace,monospace}.wsm-idx2[hidden]{display:none}
+.wsm-row{display:grid;grid-template-columns:1fr;gap:4px;align-content:start}
+.wsm-row>div{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:2px 6px;padding:4px 8px;border-radius:5px;background:#121924}
+.wsm-row b{font:700 17px/1.1 ui-monospace,"JetBrains Mono",monospace;font-variant-numeric:tabular-nums;text-align:right;color:#e8eef8;white-space:nowrap}
+.wsm-row b i{font-style:normal;color:#5a677d}
+.wsm-row .u{grid-column:1/-1;font-size:10px;color:#6f7d94;text-align:right}
+.wsm-row>div.two{grid-template-columns:1fr 1fr}
+.wsm-row>div.two .k{grid-column:1/-1}.wsm-row .k small{font-weight:500;letter-spacing:0;text-transform:none;color:#6f7d94}
+.wsm-row>div.two b{font-size:15px;text-align:left}
+.wsm-row b i{font-size:10px;margin-right:2px}
+.wsm-graph{display:grid;grid-template-rows:minmax(0,1.5fr) minmax(0,1fr);gap:6px;min-width:0;min-height:0}
+.wsmon[data-bi="1"] .wsm-graph{grid-template-rows:minmax(0,1.4fr) minmax(0,1fr)}
+.wsm-graph canvas{width:100%;height:100%;min-height:0;border-radius:4px;background:#04060a;display:block}
+.wsm-msg{margin:0;min-height:18px;font:600 12px/1.4 system-ui,sans-serif;color:#ffd166}
+/* phone: numbers in a row above the graphs */
+@media (max-width:640px){
+ .wsmon{height:auto;min-height:0;grid-template-rows:auto auto auto}
+ .wsm-body{grid-template-columns:minmax(0,1fr)}
+ .wsm-side{grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto;align-items:stretch}
+ .wsm-idx>b{font-size:44px}
+ .wsm-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .wsm-row b{font-size:15px}
+ .wsm-graph{grid-template-rows:200px 120px}
+ .wsmon[data-bi="1"] .wsm-graph{grid-template-rows:240px 150px}
+}
+/* layout: monitor left, the control dock (pump, case transport) right; notes under them. Phone: one column. */
+.ws-page #monitor .sim{display:block}
+.ws-page #monitor .live-workspace{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto;gap:16px;align-items:start}
+.ws-page #monitor .screens{height:auto;overflow:visible;display:block}
+.ws-page #monitor .panel{min-width:0}
+.ws-page .wsm-idx>b.masked{font-size:40px;line-height:1.6;color:#6b7890}
+@media (max-width:900px){.ws-page #monitor .live-workspace{grid-template-columns:minmax(0,1fr)}}
+/* full screen (projector): the case strip stays on top, the monitor fills the left and the dock (pump, case, quiz) scrolls on the
+   right, so every control stays in reach while presenting */
+.ws-page #monitor.presenting{grid-template-rows:auto auto minmax(0,1fr)!important}
+.ws-page #monitor.presenting .ws-strip{display:flex;margin:0;padding:4px 0}
+.ws-page #monitor.presenting .ws-banner{padding-bottom:4px}
+.ws-page #monitor.presenting .sim{height:100%;min-height:0;overflow:hidden}
+.ws-page #monitor.presenting .live-workspace{height:100%;min-height:0;grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:minmax(0,1fr)}
+.ws-page #monitor.presenting .screens{height:100%;min-height:0;padding:0;background:none}
+.ws-page #monitor.presenting .wsmon{height:100%;min-height:0}
+.ws-page #monitor.presenting .panel{height:100%;min-height:0;overflow:auto}
+@media (max-width:900px){
+ .ws-page #monitor.presenting .sim{overflow:auto}
+ .ws-page #monitor.presenting .live-workspace{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:auto}
+ .ws-page #monitor.presenting .wsmon{height:auto}
+ .ws-page #monitor.presenting .panel{height:auto;overflow:visible}
+}
+.ws-page #storyCap{margin:6px 0 0;padding:8px 10px;border-left:3px solid #633d3c;background:#fffdf8;font-size:14px;line-height:1.45}
+.ws-page #storyCap:empty{display:none}
+/* the dock as one column: playback, Induce / Emerge and the case caption first, then the pump, then the stimulus options */
+.ws-page #monitor .panel{display:flex!important;flex-direction:column;align-items:stretch;gap:10px;padding-top:0;border-top:0}
+.ws-page #monitor .panel>*{width:100%;min-width:0}
+.ws-page #monitor .panel .transport{order:1}
+.ws-page #monitor .panel .story{order:2}
+.ws-page #monitor .panel .depth-control{order:3}
+.ws-page #monitor .panel #teachingOptions{order:4}
+.ws-page #monitor .panel .err{order:5}
+@media (max-width:900px){.ws-page #monitor .panel{border-top:1px solid #d7d2c8;padding-top:10px}}

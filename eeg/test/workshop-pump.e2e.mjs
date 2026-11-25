@@ -28,9 +28,18 @@ try{
  assert.match(await page.textContent('#pRead'),/Ce 4\.0 µg\/ml/,'readout shows Ce');
  const bisProp=s.bis;
  // ketamine on top: faster activity, BIS higher at the same propofol Ce
- await page.locator('#pMore summary').click();await page.locator('#pKet').fill('0.6');await frame();await run(240);s=await st();
- assert.equal(s.mix.ketamine,0.6);assert.ok(s.bis>bisProp+5,`ketamine raises BIS at unchanged propofol (${bisProp} -> ${s.bis})`);
- await page.locator('#pKet').fill('0');
+ // (Domino PK: a 0.5 mg/kg bolus then 1 mg/kg/h; the Ce drives the engine's ketamine level, Ce/2, and its effect site)
+ await page.click('#pKetGive');await page.locator('#pKetInf').fill('1');await frame();await run(90);
+ let k=await page.evaluate(()=>({ce:kdxCe(PUMP.k),tot:PUMP.k.tot,mix:mix.ketamine,de:eng.de.ketamine,txt:$('pKetCe').textContent}));
+ assert.ok(k.ce>0.5&&k.ce<3,'ketamine bolus raises its Ce: '+k.ce);assert.ok(Math.abs(k.tot-35-70*1.5/60)<1,'0.5 mg/kg of 70 kg plus 90 s of infusion given: '+k.tot);
+ assert.ok(Math.abs(k.mix-Math.min(1,k.ce/2))<1e-9&&Math.abs(k.de-k.mix)<1e-9,'Ce -> engine ketamine level and effect site');assert.match(k.txt,/Ce \d\.\d\d µg\/ml/);
+ await run(150);s=await st();assert.ok(s.bis>bisProp+5,`ketamine raises BIS at unchanged propofol (${bisProp} -> ${s.bis})`);
+ await page.locator('#pKetInf').fill('0');
+ // dexmedetomidine: loading dose over 10 min, Ce rises slowly (Hannivoort PK)
+ await page.click('#pDexGive');await page.locator('#pDexInf').fill('0.5');await frame();await run(60);
+ const x1=await page.evaluate(()=>kdxCe(PUMP.x));await run(540);const x2=await page.evaluate(()=>({ce:kdxCe(PUMP.x),mix:mix.dex,left:PUMP.x.left}));
+ assert.ok(x1<0.4&&x2.ce>1&&x2.ce<2.5,`dex Ce builds over the load (${x1.toFixed(2)} -> ${x2.ce.toFixed(2)} ng/ml)`);assert.ok(x2.mix>0.4,'dex reaches the engine');assert.ok(x2.left<1e-6,'load finished after 10 min');
+ await page.locator('#pDexInf').fill('0');await page.locator('#pMore summary').click();
  // sevoflurane Et -> age-adjusted MAC in the mix
  await page.locator('#pSevo').fill('1.8');await frame();s=await st();assert.ok(Math.abs(s.mix.sevo-1)<1e-6,'1.8% at age 40 is 1 MAC');
  assert.match(await page.textContent('#pMac'),/1\.00 MAC/);
@@ -42,7 +51,7 @@ try{
  assert.equal(s.on,true,'pump still on after a jump back');assert.ok(Math.abs(s.ce-ce2)<0.2,`Ce restored (${ce2} vs ${s.ce})`);
  assert.ok(await page.evaluate(()=>TL.events.length<12),'drug marks only on pump changes, not every step');
  // Emerge: targets to zero, Ce falls by the model
- await page.click('#wakeBtn');await frame();s=await st();assert.equal(await page.evaluate(()=>PUMP.target),0);assert.equal(s.mix.remi,0);
+ await page.click('#wakeBtn');await frame();s=await st();assert.equal(await page.evaluate(()=>PUMP.target),0);assert.equal(s.mix.remi,0);assert.equal(await page.evaluate(()=>PUMP.k.inf+PUMP.x.inf),0,'Emerge stops the add-on infusions');
  const ceA=s.ce;await run(300);s=await st();assert.ok(s.ce<ceA*0.85,`Ce falls after the pump stops (${ceA} -> ${s.ce})`);assert.equal(s.r,0);
  // Induce in pump mode sets a propofol target
  await page.click('#induceBtn');assert.equal(await page.evaluate(()=>PUMP.target),3.5);
