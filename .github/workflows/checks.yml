@@ -38,6 +38,7 @@ jobs:
           - { name: EEG monitor sizing, cmd: "node eeg/test/layout.e2e.mjs" }
           - { name: EEG teaching, cmd: "node eeg/test/teaching.e2e.mjs" }
           - { name: EEG controls, cmd: "node eeg/test/controls.e2e.mjs" }
+          - { name: EEG workshop (blinded), cmd: "node eeg/test/workshop-blind.e2e.mjs" }
     name: browser (${{ matrix.name }})
     steps:
       - uses: actions/checkout@v4

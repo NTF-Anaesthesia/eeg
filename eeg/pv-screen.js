@@ -92,7 +92,7 @@ function pvDrawWave(c,arr,W,y0,h,f,col,lw){const n=PV_X1-PV_X0,gap=14;c.save();c
 function pvAlarms(){const c=pvLast(),s=PV.set,out=[];if(!c||!s.bisOn)return out;
  if(c.sqi<15)out.push({text:'BIS SQI < 15%',lv:'inop'});
  else{if(typeof isoN==='number'&&isoN>=60)out.push({text:'BIS IsoelectricEEG',lv:'inop'});
-  if(s.alarms&&c.bis!=null){if(c.bis>s.hi&&s.hi<100)out.push({text:'** BIS High',lv:'yel'});else if(c.bis<s.lo&&s.lo>0)out.push({text:'** BIS Low',lv:'yel'});}}
+  if(s.alarms&&c.bis!=null&&!masked()){if(c.bis>s.hi&&s.hi<100)out.push({text:'** BIS High',lv:'yel'});else if(c.bis<s.lo&&s.lo>0)out.push({text:'** BIS Low',lv:'yel'});}}
  return out;}
 // ----- the static layer (redrawn once a second or when something changes) -----
 function pvT(c,s,x,y,size,col,al,wt,sx){c.font=`${wt||400} ${size}px ${PV_FONT}`;c.fillStyle=col;c.textAlign=al||'left';c.textBaseline='alphabetic';
@@ -123,7 +123,7 @@ function pvStatic(){const c=PV.st.getContext('2d'),s=PV.set,last=pvLast(),bc=pvC
  c.fillStyle=PC.spo2;for(let i=0;i<7;i++){const y=402+i*7,w=27-i*3.3;c.fillRect(870,y,w,3);}
  pvBig(c,'100',905,504,176,PC.spo2);
  // BIS and its secondary numerics: yellow, Philips' factory colour and the owner's monitor (white is a choice in Main Setup)
- const bl=!last||last.sqi<15||last.bis==null||!s.bisOn,bv=bl?'-?-':String(Math.round(last.bis));
+ const bl=!last||last.sqi<15||last.bis==null||!s.bisOn,bv=bl?'-?-':masked()?MASK:String(Math.round(last.bis));
  const al=A.find(m=>m.lv==='yel'&&!PV.ack[m.text]),flash=al&&Math.floor(Date.now()/500)%2===0;
  if(flash){c.fillStyle=PC.yel;c.fillRect(860,516,320,148);}
  pvT(c,'BIS',866,540,18,flash?'#000':bc);pvBig(c,s.bisOn?bv:'',912,654,168,flash?'#000':bc);

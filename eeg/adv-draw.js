@@ -47,8 +47,8 @@ function advData(){
  const {win,tL}=advWindow(),W=ADV_PX,step=Math.max(10,win/(W/2)),D={win,tL,step,len:HIST.length,key:''};
  const hs={L:advHist('L'),R:advHist('R')},side=ADV.hemi;
  const sec=ADV.sec;
- D.bis=advSeries(hs[side],c=>c.sqi<15?null:c.bis,tL,win,step);
- D.bisO=advSeries(hs[side==='L'?'R':'L'],c=>c.sqi<15?null:c.bis,tL,win,step);
+ D.bis=advSeries(hs[side],c=>c.sqi<15?null:bisV(c.bis),tL,win,step);
+ D.bisO=advSeries(hs[side==='L'?'R':'L'],c=>c.sqi<15?null:bisV(c.bis),tL,win,step);
  D.emg=advSeries(hs[side],c=>c.emg,tL,win,step);
  D.art=advSeries(hs[side],c=>c.art||c.sqi<15?1:0,tL,win,step);
  D.srS=advSeries(hs[side],c=>c.bsr,tL,win,step);

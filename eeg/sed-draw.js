@@ -61,7 +61,7 @@ function sedData(){const hL=sedHist('L'),hR=sedHist('R'),now=simT,tE=SED.hold==n
  for(let i=i0;i<hL.length&&i<hR.length;i++){const l=hL[i],r=hR[i];if(l.n>tE)break;
   const a=l.art||l.sqi<15||r.art?1:0;ring.push(a);rs+=a;if(ring.length>60)rs-=ring.shift();
   if(l.n<tS)continue;const p=Math.floor((l.n-tS)/sp);if(p<0||p>=NPX||sedGap(l.n))continue;
-  const v=sedVals(l,r,100*rs/ring.length);for(const k of SED_PARAMS){if(v[k]==null)continue;const q=D.ser[k];q.s[p]+=v[k];q.c[p]++;}}
+  const v=sedVals(l,r,100*rs/ring.length);if(masked())v.psi=null;for(const k of SED_PARAMS){if(v[k]==null)continue;const q=D.ser[k];q.s[p]+=v[k];q.c[p]++;}}
  // fill: the mean per column (null where none), with the newest column carried to the right edge
  for(const k of SED_PARAMS){const q=D.ser[k],o=new Array(NPX);for(let p=0;p<NPX;p++)o[p]=q.c[p]?q.s[p]/q.c[p]:null;D.ser[k]=o;}
  D.hL=hL;D.hR=hR;D.start=hL.length?hL[0].n:now;return D;}
@@ -189,7 +189,7 @@ function sedWindow(c,A,L){const win=A&&A.win,col=win?sedAlarmCol(win.level):null
  if(!(SED.pop&&SED.pop.kind==='action')){c.strokeStyle='#bdbdbd';c.lineWidth=1.8;c.lineCap='round';c.beginPath();c.moveTo(737,wy+13);c.lineTo(753,wy+13);c.stroke();sChev(c,745,wy+20,18,'#bdbdbd',false,false);}}
 // ----- the trend rows -----
 function sedMap(k){const s=SED.set;switch(k){case 'psi':return {max:s.psiYmax,min:s.psiYmin,inv:false};case 'emg':return {max:s.emgYmax,min:s.emgYmin};case 'sr':return {max:s.srYmax,min:s.srYmin,inv:true};case 'artf':return {max:s.artfYmax,min:s.artfYmin};case 'sefl':return {max:s.sefYmax,min:s.sefYmin};case 'sefr':return {max:s.sefYmax,min:s.sefYmin};default:return {max:100,min:0};}}
-function sedFmt(k,N,full){const q=N&&N.v;if(!q||N.blank)return null;const v=q[k];if(v==null)return null;
+function sedFmt(k,N,full){const q=N&&N.v;if(!q||N.blank)return null;const v=q[k];if(v==null)return null;if(k==='psi'&&masked())return MASK;
  if(k==='psi'||k==='emg')return String(Math.round(v));if(k==='sr')return String(Math.round(v/2)*2);if(k==='artf')return v.toFixed(full?1:0);if(k==='sefl'||k==='sefr')return v.toFixed(1);
  if(k==='st'){const sec=Math.round(v);return SED.set.stUnit==='%'?String(Math.min(100,Math.round(100*sec/Math.max(60,simT-(SED.D?SED.D.start:0))))):pad2(Math.floor(sec/3600))+':'+pad2(Math.floor(sec/60)%60);}return String(v);}
 // a big number: whole digits large and a decimal part at 0.62 of the size, right-aligned on xr (the number's right edge)
@@ -290,7 +290,7 @@ function sedGaugeArc(c,cx,cy,rIn,rOut,a0,a1,n,gap,cols){const da=(a1-a0)/n;for(l
 function sedNeedle(c,cx,cy,ang,r0,r1,wd){c.save();c.translate(cx,cy);c.rotate(ang);c.beginPath();c.moveTo(r1,0);c.lineTo(r0,-wd/2);c.lineTo(r0,wd/2);c.closePath();c.fillStyle='#f26f21';c.fill();c.restore();}
 // the gauges are drawn in the full-size design space (y 410-732); a shared screen scales and moves them with a canvas transform
 function sedGauges(c,N,A){const s=SED.set;c.fillStyle=SC.bg;c.fillRect(12,410,775,322);
- const hiV=s.psiHi==null?100:s.psiHi,loV=s.psiLo==null?0:s.psiLo,t=N&&!N.blank&&N.v.psi!=null?N.v.psi:null,al=A&&A.par&&A.par.k==='psi';
+ const hiV=s.psiHi==null?100:s.psiHi,loV=s.psiLo==null?0:s.psiLo,t=N&&!N.blank&&N.v.psi!=null&&!masked()?N.v.psi:null,al=A&&A.par&&A.par.k==='psi';
  // ten slim dashes round a half circle: red below the low limit, white in range, red above; caution ranges recolour the edge dashes
  const nLo=loV>0?Math.max(1,Math.round(loV/10)):0,nHi=hiV<100?Math.max(1,Math.round((100-hiV)/10)):0,nMid=Math.max(1,10-nLo-nHi),cols=[];
  for(let i=0;i<nLo;i++)cols.push('#c31e26');for(let i=0;i<nMid;i++)cols.push('#f0f1f3');for(let i=0;i<nHi;i++)cols.push('#c31e26');
@@ -302,7 +302,7 @@ function sedGauges(c,N,A){const s=SED.set;c.fillStyle=SC.bg;c.fillRect(12,410,77
  if(loV>0){const a=ang(loV);sT(c,String(loV),206+152*Math.cos(a)-4,CY+152*Math.sin(a)+4,16,'#aeaeac','center');}
  // the needle is a short fat wedge: its base near the digits, its tip on the ring's inner edge
  if(t!=null)sedNeedle(c,206,CY,ang(t),58,116,14);
- sT(c,t==null?'--':String(Math.round(t)),210,CY-4,96,al?'#fff':SC.yel,'center',400);sT(c,'PSI',206,CY+68,34,SC.unit,'center',400);
+ sT(c,masked()&&N&&!N.blank?MASK:t==null?'--':String(Math.round(t)),210,CY-4,96,al?'#fff':SC.yel,'center',400);sT(c,'PSI',206,CY+68,34,SC.unit,'center',400);
  if(al){c.strokeStyle=sedAlarmCol(A.par.level);c.lineWidth=3;c.strokeRect(14,425,380,290);}
  // two small gauges: six white dashes, the digits at the centre, the needle a short wedge that starts outside the digits and ends outside the ring
  const mini=(cy,name,v,val)=>{const cx=612,ang2=Math.PI+Math.PI*clampv(v==null?0:v,0,100)/100;sedGaugeArc(c,cx,cy,65,78,Math.PI,2*Math.PI,6,0.035,['#f0f1f3','#f0f1f3','#f0f1f3','#f0f1f3','#f0f1f3','#f0f1f3']);
