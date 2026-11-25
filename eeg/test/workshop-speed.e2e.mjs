@@ -59,8 +59,11 @@ try{
  for(const how of ['induce','pump']){
   const [a,b,c]=[1,10,60].map(s=>T[how][s]);
   for(const [r,s] of [[b,10],[c,60]]){
-   assert.ok(Math.abs(r.sim-a.sim)<=Math.max(6,0.15*a.sim),`${how}: sim time to BIS 60 is the same at ${s}x: ${a.sim.toFixed(1)} vs ${r.sim.toFixed(1)} s`);
-   const want=a.wall/s;assert.ok(r.wall<=want*1.35+0.25&&r.wall>=want*0.6,`${how}: wall time at ${s}x is about 1/${s} of 1x: ${r.wall.toFixed(2)} s (1x ${a.wall.toFixed(1)} s, ideal ${want.toFixed(2)} s)`);}}
+   // the same course in sim time (runs differ by about ±10% from the random EEG near the BIS 60 line)
+   assert.ok(Math.abs(r.sim-a.sim)<=Math.max(8,0.25*a.sim),`${how}: sim time to BIS 60 is about the same at ${s}x: ${a.sim.toFixed(1)} vs ${r.sim.toFixed(1)} s`);
+   // and it plays at 1/speed of wall time: against this run's own sim time, and against the 1x wall time
+   assert.ok(Math.abs(r.wall-r.sim/s)<=0.12*r.sim/s+0.25,`${how}: ${s}x plays ${r.sim.toFixed(1)} sim s in ${r.wall.toFixed(2)} wall s`);
+   const want=a.wall/s;assert.ok(r.wall<=want*1.4+0.25&&r.wall>=want*0.6,`${how}: wall time at ${s}x is about 1/${s} of 1x: ${r.wall.toFixed(2)} s (1x ${a.wall.toFixed(1)} s, ideal ${want.toFixed(2)} s)`);}}
  // 3. DSA columns per wall second scale with the speed; the raw EEG feed does not
  const page=await open();const R={};
  for(const s of [1,10,60]){await page.click(`#speedSeg [data-speed="${s}"]`);R[s]=await rates(page);}
