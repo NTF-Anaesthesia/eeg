@@ -21,7 +21,7 @@ body.ws-page{
 .ws-page #classicWrap,.ws-page #sedWrap,.ws-page #pvWrap,.ws-page #vMenu,.ws-page #keySeg,.ws-page #teachStrip,.ws-page #monitorChoice,
 .ws-page label[for=monitorChoice],.ws-page #mixCtl,.ws-page #depthCtl,.ws-page #displayOptions,.ws-page .reading,.ws-page #storyBtn,
 .ws-page #observationNotes,.ws-page #learningButton,.ws-page .depth-head,.ws-page #mixTeaching,.ws-page #mixObservation{display:none!important}
-.ws-foot{margin:28px 0 12px;font-size:15px;color:var(--n-muted)}
+.ws-foot{margin:20px 0 12px;font-size:15px;color:var(--n-muted)}
 /* header strip: the brand stripe, the NTF Anaesthesia logo, NTFGH and NUHS large and bold, the session title */
 .ws-page .ws-stripe{flex:1 1 100%;display:grid;grid-template-columns:repeat(4,1fr);height:6px;margin:0}
 .ws-page .ws-stripe i:nth-child(1){background:var(--n-orange)}.ws-page .ws-stripe i:nth-child(2){background:var(--n-red)}
@@ -74,18 +74,79 @@ body.ws-page{
  .ws-page .apptitle{font-size:24px}
  .ws-page .ws-case select,.ws-page .ws-quiz{font-size:17px}
 }
-/* layout: on a wide screen the BIS Advance on the left and the control dock (playback, case caption, pump) on the right, in the
-   column the main page gives its notes; demo.js fits the monitor to the rest (--fit-side). Narrower: the dock under the monitor. */
-@media (min-width:1101px){
- .ws-page #monitor .sim{--fit-side:400px;grid-template-columns:minmax(0,var(--monitor-width,1fr)) minmax(400px,1fr)}
+/* layout. Side by side (iPad and phone landscape, laptops, projector; a workshop colleague, 25 Nov 2026: "When I use landscape -
+   can the toggle buttons be on the side instead of at the bottom?"): the BIS Advance on the left, as large as the height allows,
+   and the control dock (playback, Induce / Emerge / Alpha dropout, caption, pump) in a scrolling column on the right. demo.js
+   fits the monitor to the rest (--fit-side; --fit-desk makes it measure the row below 1101 px too). Portrait (iPad and phone):
+   one column, the monitor at its own 3:2 shape (no blank bands), then the dock. */
+@media (min-width:1101px),(orientation:landscape) and (min-width:640px){
+ .ws-page #monitor .sim{--fit-side:400px;--fit-desk:1;display:grid;grid-template-columns:minmax(0,var(--monitor-width,1fr)) minmax(var(--fit-side),1fr);gap:16px}
  .ws-page #monitor .live-workspace{display:contents}
- .ws-page #monitor .panel{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:stretch;gap:10px;border-top:0;padding-top:0;min-width:0}
+ .ws-page #monitor .panel{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:stretch;gap:10px;border-top:0;padding-top:0;min-width:0;
+  max-height:var(--ws-row);overflow:auto;overscroll-behavior:contain}
  .ws-page #monitor .panel>*{width:100%;min-width:0}
- .ws-page #monitor .screens{grid-column:1;grid-row:1}
- .ws-page #monitor.presenting .sim{height:100%;min-height:0}
+ /* the row is the monitor's own height when the width limits it (3:2), so no blank band above and below */
+ .ws-page #monitor .screens{grid-column:1;grid-row:1;height:min(var(--ws-row),calc((100vw - 48px - var(--fit-side) - 16px)*.667))}
+ .ws-page #monitor .panel{max-height:min(var(--ws-row),calc((100vw - 48px - var(--fit-side) - 16px)*.667))}
+ .ws-page #monitor{--ws-row:clamp(300px,calc(100svh - 110px),1100px)}
+ .ws-page #monitor.presenting .sim{display:grid;height:100%;min-height:0;overflow:visible}
  .ws-page #monitor.presenting .screens{height:100%;min-height:0}
- .ws-page #monitor.presenting .panel{height:100%;min-height:0;overflow:auto;padding:0 4px 0 0}
+ .ws-page #monitor.presenting .panel{height:100%;max-height:none;min-height:0;overflow:auto;padding:0 4px 0 0}
+ .ws-page #monitor.presenting .live-workspace{display:contents}
 }
+/* iPad landscape (touch screens up to 1366 px; laptops keep the large header): a narrower dock and a smaller header, so the monitor gets the width */
+@media (orientation:landscape) and (min-width:640px) and (max-width:1366px) and (pointer:coarse){
+ .ws-page #monitor .sim{--fit-side:330px}
+ .ws-page .ws-logo img{height:60px}
+ .ws-page .ws-org{font-size:40px}.ws-page .ws-org+.ws-org{padding-left:16px}
+ .ws-page .ws-title{font-size:19px}.ws-page .ws-title b{font-size:24px}
+ .ws-page .ws-banner{padding:8px 0}
+ .ws-page #monitor:not(.presenting) .apptitle{font-size:22px}
+}
+/* iPad landscape height (up to 1024 px): one short header row, so the monitor starts high enough to fit the screen */
+@media (orientation:landscape) and (min-width:640px) and (max-height:1050px) and (max-width:1366px) and (pointer:coarse){
+ .ws-page .ws-logo img{height:46px}
+ .ws-page .ws-org{font-size:32px}
+ .ws-page .ws-title{flex-basis:auto;font-size:16px}.ws-page .ws-title b{font-size:20px}
+ .ws-page .ws-banner{padding:6px 0;gap:6px 16px}
+ .ws-page .ws-strip{padding-bottom:6px}
+ .ws-page #monitor:not(.presenting) .apptitle{display:none}
+ .ws-page #monitor{gap:8px}
+}
+/* phone landscape: the header shrinks to one short row and the dock to 290 px */
+@media (orientation:landscape) and (max-height:540px){
+ .ws-page #monitor .sim{--fit-side:290px}
+ .ws-page #monitor{--ws-row:calc(100svh - 64px)}
+ .ws-page .ws-logo img{height:36px}
+ .ws-page .ws-org{font-size:26px}.ws-page .ws-org+.ws-org{padding-left:10px;border-left-width:3px}
+ .ws-page .ws-title{display:none}
+ .ws-page .ws-banner{padding:4px 0;gap:4px 12px}
+ .ws-page .apptitle{font-size:20px}
+ body.ws-page{font-size:16px}
+}
+@media (orientation:portrait),(max-width:639px){
+ .ws-page #monitor .panel{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+ .ws-page #monitor .panel>*{width:100%;min-width:0}
+ .ws-page #monitor .screens,.ws-page #monitor.presenting .screens{height:auto;aspect-ratio:3/2;align-items:flex-start}
+ .ws-page #monitor.presenting .sim{display:block;overflow:auto}
+ .ws-page #monitor.presenting .live-workspace{height:auto;display:grid;grid-template-rows:auto auto}
+}
+/* touch (the participants use iPads): no double-tap zoom or text selection on controls, no grey tap flash, 44 px targets,
+   16 px or larger inputs (iOS zooms into smaller ones), larger slider thumbs */
+.ws-page{touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.ws-page :is(button,select,summary,label,input[type=range],.ws-quiz,#channelChoice,.demo-toolbar,.advwrap){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ws-page #monitor :is(.panel,.monhead,.ws-strip,.ws-banner) :is(button,select,summary):not(.sr-only),.ws-page .ws-quiz{min-height:44px}
+.ws-page #monitor .pump :is(select,input[type=number]),.ws-page #monitor .pump-mode button,.ws-page #monitor .pump-reset,.ws-page #monitor .pump-give{min-height:44px;font-size:16px}
+.ws-page #monitor .pump-mode button{min-width:52px}
+.ws-page #monitor input[type=number]{font-size:16px}
+.ws-page #monitor .panel input[type=range],.ws-page #playSpeed{height:44px;min-height:44px;touch-action:none}
+
+.ws-page #monitor .pump-slider input{min-height:44px}
+.ws-page #monitor .pump-note{display:none}
+.ws-page #monitor .story .row{display:flex;flex-wrap:wrap;gap:8px}
+.ws-page #monitor .story .row button{flex:1 1 auto;min-height:48px;padding:8px 12px;border:1px solid var(--n-navy);border-radius:5px;background:#fff;color:var(--n-navy);font:600 17px/1.1 var(--n-font)}
+.ws-page #wsAlpha[aria-pressed=true]{background:var(--n-bg-blue);border-color:var(--n-navy);color:var(--n-navy)}
+.ws-page #wsAlpha:disabled{opacity:.55;cursor:not-allowed}
 .ws-page #monitor .panel .transport{order:1}.ws-page #monitor .panel .story{order:2}.ws-page #monitor .panel .depth-control{order:3}
 .ws-page #monitor .panel #teachingOptions{order:4}.ws-page #monitor .panel .err{order:5}
 /* larger type in the dock, case bar and sensor switch (read from the back of a room) */
@@ -95,10 +156,10 @@ body.ws-page{
 .ws-page #monitor .pump-read{font-size:16px;color:var(--n-ink)}
 .ws-page #monitor .pump-ce{font-size:15px;color:var(--n-ink)}
 .ws-page #monitor .pump-slider small,.ws-page #monitor .pump-note{font-size:14px;color:var(--n-muted)}
-.ws-page #monitor .pump select,.ws-page #monitor .pump input[type=number]{min-height:42px;border-color:#7a8594;border-radius:5px;background:#fff;color:var(--n-ink)}
-.ws-page #monitor .pump-mode button,.ws-page #monitor .pump-reset{min-height:42px;font-size:16px;border-color:#7a8594;color:var(--n-ink)}
+.ws-page #monitor .pump select,.ws-page #monitor .pump input[type=number]{min-height:44px;border-color:#7a8594;border-radius:5px;background:#fff;color:var(--n-ink)}
+.ws-page #monitor .pump-mode button,.ws-page #monitor .pump-reset{min-height:44px;font-size:16px;border-color:#7a8594;color:var(--n-ink)}
 .ws-page #monitor .pump-mode button[aria-pressed=true]{background:var(--n-navy);border-color:var(--n-navy);color:#fff}
-.ws-page #monitor .pump-give{min-height:42px;font-size:16px;border-color:var(--n-navy);color:var(--n-navy);background:#fff;border-radius:5px}
+.ws-page #monitor .pump-give{min-height:44px;font-size:16px;border-color:var(--n-navy);color:var(--n-navy);background:#fff;border-radius:5px}
 .ws-page #monitor .pump-give:hover{background:#eef3f8}
 .ws-page #monitor .story button{font-size:18px;color:var(--n-navy);font-weight:600}
 .ws-page #monitor .transport,.ws-page #monitor .transport :is(span,output,time){font-size:17px}
@@ -114,3 +175,6 @@ body.ws-page{
  .ws-page .ws-banner{gap:6px 12px}
  .ws-page .ws-org{font-size:28px}.ws-page .ws-org+.ws-org{padding-left:12px;border-left-width:3px}
 }
+/* a long case name never widens the page (phones) */
+.ws-page .ws-case{min-width:0;max-width:100%;overflow:hidden;padding:6px;margin:-6px}.ws-page .ws-case select{min-width:0;width:100%;text-overflow:ellipsis}
+@media (orientation:portrait) and (min-width:640px) and (max-width:1100px){.ws-page .ws-logo img{height:64px}.ws-page .ws-org{font-size:44px}}

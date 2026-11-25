@@ -15,3 +15,15 @@ if(!PUMP.on)pumpStart();
 {const b=$('wsBanner');if(b){const a=document.createElement('a');a.className='ws-logo';a.href='https://anantf.com/';a.setAttribute('aria-label','NTF Anaesthesia home');
  a.innerHTML='<img src="../assets/ana-ntf-logo.svg?v=clean" alt="NTF Anaesthesia" width="229" height="120">';b.prepend(a);
  const s=document.createElement('div');s.className='ws-stripe';s.setAttribute('aria-hidden','true');s.innerHTML='<i></i><i></i><i></i><i></i>';b.before(s);}}
+// Alpha dropout (a workshop colleague, 25 Nov 2026: "can have the alpha dropout"): one key beside Induce and Emerge that runs the
+// engine's surgical stimulus as an alpha dropout (alpha band dips while the hypnotic target is unchanged, 100 s). Off during a
+// quiz case, so it cannot change the EEG under a checkpoint question. Burst suppression needs no key: a deeper target gives it.
+{const b=document.createElement('button');b.className='btn';b.id='wsAlpha';b.type='button';b.textContent='Alpha dropout';b.setAttribute('aria-pressed','false');
+ $('wakeBtn').after(b);
+ b.addEventListener('click',()=>{if(b.disabled)return;stimAll('alpha');if(paused)$('pause').click();wsAlphaUI();});
+ function wsAlphaUI(){const quiz=typeof qz!=='undefined'&&qz.on&&(qz.case||qz.open),on=eng.stT>0;b.disabled=!!quiz||on||!!TL.busy;
+  b.setAttribute('aria-pressed',String(on));b.textContent=on?'Alpha dropout…':'Alpha dropout';
+  b.title=quiz?'Not during the quiz':on?'Running (about 100 s)':'Alpha band dips while the drug target stays the same';}
+ setInterval(wsAlphaUI,300);wsAlphaUI();}
+// Home screen app: the workshop page's own service worker (scope ./ = /workshop/ only) keeps the page working if the venue Wi-Fi drops
+if('serviceWorker' in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(()=>{}));

@@ -8,7 +8,16 @@
 <meta name="color-scheme" content="light">
 <title>EEG workshop · BIS DSA and SEF95 simulator</title>
 <meta name="description" content="Workshop simulator: blinded reading of the density spectral array (DSA), SEF95 and the raw EEG, with scripted cases, a quiz and a TCI pump. Synthetic EEG only.">
-<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<!-- its own home-screen app (id /workshop/, scope ./), apart from any future main-page install; installable, never prompted -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EEG Workshop">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<script>addEventListener('beforeinstallprompt', e => e.preventDefault());</script>
 <!-- The workshop page (25 Nov 2026): the same engine, BIS Advance screen, pump, cases and quiz scripts as the main page
      (../index.html), with no skin picker, a large NTFGH / NUHS header and the NUHS page style (ws-page.css). Generated from the
      main page's monitor section (so the shared scripts find their elements); the Medtronic-style screen is left out, and the
@@ -116,7 +125,7 @@
 <!-- elements the shared scripts expect from the main page's teaching sections; empty and hidden here -->
 <div id="wsStubs" hidden><canvas id="cEx"></canvas><ol id="steps"></ol><p id="exCap"></p><button id="exPlay" type="button"></button><button id="exNext" type="button"></button>
 <div id="lib"></div><canvas id="cQuiz"></canvas><span id="score"></span><div id="opts"></div><p id="fb"></p><button id="qNext" type="button"></button></div>
-<footer class="ws-foot">A teaching simulation for a workshop. The EEG is synthetic and the BIS-like index comes from a simple model of spectral features, not the monitor's algorithm. Not for clinical use.</footer>
+<footer class="ws-foot">Teaching simulation with synthetic EEG; the index is a model, not the monitor's algorithm. Not for clinical use or dosing.</footer>
 </div>
 <script src="../mt-screen.js"></script>
 <script src="../adv-screen.js"></script>
