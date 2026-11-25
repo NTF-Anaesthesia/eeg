@@ -673,12 +673,15 @@ function stopStory(){if(!story)return;story=null;storyButtonUI('Play induction �
 $('storyBtn').onclick=()=>{if(story){stopStory();$('storyCap').textContent='';return;}
  nmReset();story={t0:simT,i:-1};mods.elderly=false;$('mElder').checked=false;for(const [k,id] of SMODS){mods[k]=false;$(id).checked=false;}setNmb('off');eng.stT=R.eng.stT=0;tim.sup=tim.low=R.tim.sup=R.tim.low=0;setSpeed(10);
  if(paused)$('pause').click();storyButtonUI('Stop demonstration');};
-function runStory(){if(!story)return;const t=simT-story.t0,steps=story.lesson?EEG_LESSONS[story.lesson].steps:STORY;
+// workshop cases (cases.js) bring their own steps, which may also set the TCI pump (pump), call act() and carry a neutral
+// event line (ev) shown instead of the caption while the index is blinded
+function runStory(){if(!story)return;const t=simT-story.t0,steps=story.steps||(story.lesson?EEG_LESSONS[story.lesson].steps:STORY);
  while(story.i+1<steps.length&&t>=steps[story.i+1].at){story.i++;const s=steps[story.i];
   if(s.drug)setDrug(s.drug);if(s.d!=null){depth=s.d;$('depth').value=Math.round(s.d*100);}
   if(s.mods){for(const [k,id] of SMODS){mods[k]=!!(s.mods[k]||story.overlays?.[k]);$(id).checked=mods[k];}setNmb(s.mods.nmb===false?'off':s.mods.nmb===true?'on':'off');}
   if(s.stim)stimAll(s.stim);else if(s.mods)eng.stT=R.eng.stT=0;
-  applyTarget();if(s.snap)snapAll();$('storyCap').textContent=`${story.i+1}/${steps.length} · ${s.cap}`;
+  if(s.pump&&typeof pumpSet==='function')pumpSet(s.pump);if(typeof s.act==='function')s.act();
+  applyTarget();if(s.snap)snapAll();$('storyCap').textContent=`${story.i+1}/${steps.length} · ${masked()&&s.ev?s.ev:s.cap}`;
   if(s.end){story=null;storyButtonUI('Replay demonstration');setSpeed(1);return;}}}
 
 // ===== explainer animation =====
