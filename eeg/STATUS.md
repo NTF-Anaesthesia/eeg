@@ -22,6 +22,9 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- More realistic EEG (25 Nov 2026; `docs/engine-and-wording.md` "Signal realism"): shaped random-phase noise in
+  place of the oscillator bank, slow band drift, skewed slow waves with alpha riding them, burst onset waves and
+  flatter suppression, awake EMG and movement artefacts, stronger alpha dropout. Index ranges unchanged; cheaper CPU.
 - Workshop speed keys 1x to 60x (25 Nov 2026; `docs/workshop.md`): the slider popover was clipped by the dock in landscape;
   six keys now drive the sim clock, the raw EEG stays real time, 60x holds on a throttled CPU.
 - Workshop page for iPads (25 Nov 2026; `docs/workshop.md`): controls in a side column in landscape (iPad and phone),

@@ -67,9 +67,11 @@ Part of the BIS to DSA / processed EEG notes. Index: [../NOTES.md](../NOTES.md).
 
 ## How it works (`app.js`)
 
-- `Engine`: a bank of oscillators every 0.5 Hz (0.5–47 Hz) with phase jitter, shaped by a spectral profile per state
-  (1/f background plus slow, delta, theta, alpha, spindle, beta, gamma and EMG terms; burst suppression gates the
-  signal). `DRUGS` holds keyframes along the depth slider; the live state glides to the target (about 8 s).
+- `Engine`: shaped random-phase noise (since 25 Nov 2026; before, a bank of oscillators every 0.5 Hz). Each second a
+  2-s block per stream is drawn in the frequency domain from a spectral profile per state (1/f background plus slow,
+  delta, theta, alpha, spindle, beta, gamma and EMG terms), turned into a trace with one FFT per two streams and
+  overlap-added (sqrt-Hann). Details and references: `docs/engine-and-wording.md` "Signal realism". `DRUGS` holds
+  keyframes along the depth slider; the live state glides to the target (about 8 s).
 - 128 samples/s; every second the newest 2 s (256 samples) gets a Hann window and an FFT; bins 0–30 Hz become one DSA
   column (turbo colour map, -3 to 31 dB: awake is dim blue with speckle).
 - Awake EEG is small (about 10 µV RMS, one shared `AWAKE` keyframe); propofol GA is about 3× the amplitude (Purdon

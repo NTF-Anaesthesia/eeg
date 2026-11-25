@@ -61,8 +61,11 @@ const p57 = run('propofol', 0.57, {}, 120, null, 4);
 chk('Propofol 0.57', 'BIS', p57.bis, 40, 55); chk('Propofol 0.57', 'SEF95', p57.sef, 12, 17);
 chk('Propofol 0.57', 'RMS uV', p57.rms, 25, 40); chk('Propofol 0.57', 'RMS GA/awake', p57.rms / awake.rms, 3, 99);
 // the Medtronic screen's amplitude (AMPL, max |EEG| per second in dB re 1 uV) and ST (cumulative suppression seconds) columns
-{ const lastCol = awake.S.COLS[awake.S.COLS.length - 1], gaCol = p57.S.COLS[p57.S.COLS.length - 1];
-  chk('Medtronic AMPL', 'awake amplitude dB (about 25-40 uV peak)', lastCol.amp, 22, 36); chk('Medtronic AMPL', 'GA amplitude minus awake (slow waves are bigger)', gaCol.amp - lastCol.amp, 0.01, 20);
+// AMPL is read as the median of the last 30 columns: since 25 Nov 2026 the awake EEG has movement swings and EMG bursts and
+// every band drifts, so a single column is chance
+{ const lastCol = awake.S.COLS[awake.S.COLS.length - 1], med = S => { const a = S.COLS.slice(-30).map(c => c.amp).sort((x, y) => x - y); return a[15]; };
+  const aw = med(awake.S), ga = med(p57.S);
+  chk('Medtronic AMPL', 'awake amplitude dB (about 25-40 uV peak), median 30 s', aw, 22, 36); chk('Medtronic AMPL', 'GA amplitude minus awake (slow waves are bigger)', ga - aw, 0.01, 20);
   chk('Medtronic ST', 'ST seconds, awake', lastCol.st, 0, 0); }
 const p76 = run('propofol', 0.76);
 chk('Propofol 0.76', 'BIS', p76.bis, 30, 42); chk('Propofol 0.76', 'SR', p76.sr, 0, 4.99);
