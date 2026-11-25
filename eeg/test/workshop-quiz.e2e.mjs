@@ -19,7 +19,7 @@ try{
  let s=await page.evaluate(()=>({blind:masked(),q:workspace.dataset.quiz,case:qz.case,pressed:$('quizBtn').getAttribute('aria-pressed')}));
  assert.deepEqual(s,{blind:true,q:'on',case:'tci',pressed:'true'});
  assert.ok(await page.locator('#pumpCtl').isHidden()&&await page.locator('#agentChoice').isHidden(),'pump and agent hidden');assert.ok(await page.locator('#quizHidden').isVisible());
- await runTo(60);assert.match(await page.textContent('#storyCap'),/^2\/10 · Induction\.$/,'neutral event line: no agent named');
+ await runTo(60);assert.equal(await page.textContent('#storyCap'),'','no step caption in a quiz case (it named the phase)');
  // checkpoint 1 (maintenance): pauses, all correct
  await runTo(350);await card();assert.equal(await page.evaluate(()=>paused),true,'the case pauses at a checkpoint');
  assert.match(await page.textContent('#quizTitle'),/Checkpoint 1 of 3/);assert.equal(await page.locator('#quizForm fieldset').count(),3,'phase, agent, arousal');

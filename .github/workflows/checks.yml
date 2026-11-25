@@ -46,6 +46,7 @@ jobs:
           - { name: EEG workshop page (/workshop/), cmd: "node eeg/test/workshop-page.e2e.mjs" }
           - { name: EEG playback speed, cmd: "node eeg/test/speed.e2e.mjs" }
           - { name: EEG workshop speed keys, cmd: "node eeg/test/workshop-speed.e2e.mjs" }
+          - { name: EEG workshop QA fixes (real clicks), cmd: "node eeg/test/workshop-qa.e2e.mjs" }
           - { name: EEG workshop on iPads (WebKit), cmd: "node eeg/test/workshop-ipad.e2e.mjs", browser: webkit }
     name: browser (${{ matrix.name }})
     steps:

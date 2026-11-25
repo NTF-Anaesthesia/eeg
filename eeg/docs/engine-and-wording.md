@@ -7,7 +7,8 @@ Part of the BIS to DSA / processed EEG notes. Index: [../NOTES.md](../NOTES.md).
 - "Mix drugs" mode: sliders for propofol (effect-site µg/ml), sevoflurane (MAC), remifentanil (ng/ml), ketamine and
   dexmedetomidine (share of an anaesthetic / deep-sedation dose) and N₂O (%), plus presets. `mixTarget()`: propofol
   (×0.155 per µg/ml) and sevo (MAC → depth: 0.3→0.30, 0.5→0.44, 1.0→0.60, 1.5→0.76, 2.0→0.88; `sevoDepth`) add into
-  one hypnotic depth (capped 0.95, 0.90 for sevo), blended between the two drugs' keyframes; dex and N₂O add a little
+  one hypnotic depth (unchanged up to 0.9, then a soft saturation towards 1, 0.95 for sevo alone, since 25 Nov 2026: a hard
+  cap at 0.95 hid how far above it the sum was, so suppression stayed flat for minutes after all agents stopped), blended between the two drugs' keyframes; dex and N₂O add a little
   depth; then ketamine, dex, remi and N₂O add their own signatures. Teaching approximation.
 - Remifentanil barely moves BIS at rest (Guignard 2000); it blunts EMG and arousal. Only above 4 ng/ml does it add a
   little depth, and above 6 ng/ml some delta and slow power.

@@ -71,3 +71,9 @@
 .quiz-actions button+button{background:var(--inset);color:var(--accent)}
 #monitor.presenting .quiz-card{right:12px;bottom:12px}
 @media (max-width:560px){.quiz-card{left:8px;right:8px;bottom:8px;width:auto;max-height:45vh;padding:12px 14px}} /* the monitor stays visible above it */
+/* during a quiz case the step captions are hidden (they named the phase: QA, 25 Nov 2026); the answer lists them (quiz.js) */
+#monitor:is([data-quiz=on],[data-quiz=reveal]) #storyCap{display:none}
+.quiz-events ul{margin:4px 0 0;padding-left:18px}
+#tLine.locked{opacity:.55;pointer-events:none} /* the timeline in a quiz case (quiz.js) */
+.quiz-card h2:focus{outline:0} /* the card focuses its heading, not the first answer (it looked chosen) */
+.pump-msg{margin:2px 0 0;color:#b00020;font-size:13px}.pump-msg:empty{display:none}

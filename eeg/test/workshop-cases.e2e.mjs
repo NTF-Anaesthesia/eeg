@@ -17,7 +17,7 @@ try{
  // deep link: the propofol TCI case starts at once on the pump
  await page.goto(BASE+'?case=tci');await ready();
  let s=await page.evaluate(()=>({id:story?.case,on:PUMP.on,sel:$('caseChoice').value,speed,cap:$('storyCap').textContent}));
- assert.equal(s.id,'tci');assert.equal(s.on,true,'the case drives the pump');assert.equal(s.sel,'tci','menu shows the case');assert.match(s.cap,/^1\/10 · Awake/);
+ assert.equal(s.id,'tci');assert.equal(s.on,true,'the case drives the pump');assert.equal(s.sel,'tci','menu shows the case');assert.match(s.cap,/^Awake baseline before induction/,'teaching caption, no step count');
  const m=await at(340,20);assert.ok(m.bis>38&&m.bis<60,'maintenance BIS in range: '+m.bis);assert.ok(Math.abs(m.pump.propofol-4)<0.3,'Ce near the 4 µg/ml target');
  assert.ok(await page.evaluate(()=>mods.nmb),'relaxant on during surgery');
  const pre=await at(595,20),dip=await at(645,20),ar=await at(695);
@@ -48,13 +48,14 @@ try{
  const d0=await ex(410),d1=await ex(1000);
  assert.ok(d0.dex===0&&d1.dex>0.6,'dex Ce on the pump: '+d1.dex.toFixed(2));assert.ok(Math.abs(d1.prop-3.5)<0.1,'propofol TCI live alongside');assert.ok(d1.panel,'pump panel shown in the case');
  assert.ok(d1.slow>d0.slow&&d1.alpha<d0.alpha,`dex: slow ${d0.slow.toFixed(1)} -> ${d1.slow.toFixed(1)} dB, alpha ${d0.alpha.toFixed(1)} -> ${d1.alpha.toFixed(1)} dB`);
- // blinded: the caption is the neutral event line (no interpretation, no drug name for the adjunct)
+ // blinded but not in the quiz: the mask hides the number, not the teaching (QA pass, 25 Nov 2026), no step count
  await page.goto(BASE+'?case=propket&blind=1');await ready();await at(500);
- assert.match(await page.textContent('#storyCap'),/^5\/8 · Drug given\.$/,'neutral event line while blinded');
+ assert.match(await page.textContent('#storyCap'),/^Ketamine added: 0\.5 mg\/kg bolus/,'teaching caption while blinded');
  assert.ok(page.url().includes('case=propket')&&page.url().includes('blind=1'),'both params kept in the address');
  // the timeline still works inside a case
  const t=await page.evaluate(()=>simT);await page.evaluate(t=>tlJump(t-200),t);await page.waitForFunction(()=>!TL.busy);
  assert.equal(await page.evaluate(()=>story?.case),'propket','case survives a jump back');
+ assert.equal(await page.textContent('#storyCap'),'','a jump back clears the caption (it would be stale)');
  // choosing no case stops it
  await page.selectOption('#caseChoice','');assert.equal(await page.evaluate(()=>story),null);assert.ok(!page.url().includes('case='));
  // phone: the strip fits
@@ -62,5 +63,5 @@ try{
  const bb=await page.locator('#caseChoice').boundingBox();assert.ok(bb.x>=0&&bb.x+bb.width<=321&&bb.height>=40,'case menu fits a 320 px phone');
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no horizontal overflow');
  assert.deepEqual(errors,[]);
- console.log('PASS workshop cases: ?case= and menu; propofol TCI, sevoflurane and propofol + ketamine phases; blinded event lines; timeline');
+ console.log('PASS workshop cases: ?case= and menu; propofol TCI, sevoflurane and propofol + ketamine phases; teaching captions while blinded; timeline');
 }finally{await browser.close();}

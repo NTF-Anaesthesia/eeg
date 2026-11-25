@@ -14,7 +14,8 @@ function blindRefresh(){dirty=true;
  try{if(typeof sedInval==='function')sedInval();SED.outSince=null;}catch(e){}
  try{PV.dirty=true;}catch(e){}
  if(zoneBand.pts)zoneBand(zoneBand.pts);$('tgtPop').hidden=true;
- try{readouts();describe();fcUI();}catch(e){}}
+ try{readouts();describe();fcUI();}catch(e){}
+ try{storyCapRefresh();}catch(e){}} // the case caption too (QA pass, 25 Nov 2026: Reveal left the old one)
 function blindUI(){blindBtn.setAttribute('aria-pressed',String(blind.on));revealBtn.hidden=!blind.on;revealBtn.setAttribute('aria-pressed',String(blind.reveal));
  const rl=blind.reveal?'Mask the number again':'Reveal the masked number';revealBtn.setAttribute('aria-label',rl);revealBtn.title=rl;
  revealBtn.querySelector('span').textContent=blind.reveal?'Mask':'Reveal';

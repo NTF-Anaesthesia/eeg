@@ -3,7 +3,8 @@
 // no sideways scroll; landscape = monitor with the controls in a side column, portrait = stacked with no blank band; every
 // visible control at least 44 px; taps work (Quiz, Ce/Cp, sensor channels, Reveal, Give ketamine, the Advance's own menu
 // key, Alpha dropout, the full-screen key's focus mode); the pump target slider follows a drag; no teaching text or pump note;
-// the home-screen manifest is linked with its own id and scope.
+// the home-screen manifest is linked with its own id and scope; the monitor grows in focus mode; a quiz checkpoint card sits
+// beside or under the monitor with Check answers in view, answered by taps.
 // Run with a static server in the repo root: PORT=8080 node eeg/test/workshop-ipad.e2e.mjs (needs Playwright's WebKit)
 import assert from 'node:assert/strict';
 const {webkit}=await import(process.env.PLAYWRIGHT_PATH||'/opt/node22/lib/node_modules/playwright/index.mjs');
@@ -58,6 +59,8 @@ try{
   assert.equal(await page.locator('#speedSeg [aria-pressed=true]').count(),1);
   await tap(page,'#speedSeg [data-speed="5"]');
   // Alpha dropout: runs the stimulus as an alpha dip; the key shows it running
+  // (off while awake: move the case into maintenance first)
+  await page.evaluate(()=>{tlRun(Math.max(0,story.t0+420-simT));dirty=true;});await page.waitForFunction(()=>!$('wsAlpha').disabled);
   await tap(page,'#wsAlpha');assert.ok(await page.evaluate(()=>eng.stT>0&&eng.stK==='alpha'),`${tag}: tap Alpha dropout`);
   assert.equal(await page.locator('#wsAlpha').getAttribute('aria-pressed'),'true');
   // Give ketamine: its Ce rises
@@ -75,10 +78,24 @@ try{
   await tap(page,'#fullScreen');await page.waitForTimeout(300);
   const fs=await box(page,'#monitor');assert.ok(await page.evaluate(()=>workspace.classList.contains('presenting')),`${tag}: focus mode on`);
   assert.ok(Math.abs(fs.w-w)<2&&Math.abs(fs.h-h)<2&&Math.abs(fs.x)<1&&Math.abs(fs.y)<1,`${tag}: focus mode fills the viewport: ${JSON.stringify(fs)}`);
-  if(land){const a=await box(page,'#advWrap');assert.ok(a.b<=h+1,`${tag}: the monitor fits on screen in focus mode`);}
+  if(land){const a=await box(page,'#advWrap');assert.ok(a.b<=h+1,`${tag}: the monitor fits on screen in focus mode`);
+   if(w>=1024)assert.ok(a.h>adv.h+15,`${tag}: the monitor is bigger in focus mode (${Math.round(adv.h)} -> ${Math.round(a.h)} px)`);}
   await tap(page,'#fullScreen');await page.waitForTimeout(300);
   assert.ok(!(await page.evaluate(()=>workspace.classList.contains('presenting'))),`${tag}: focus mode off`);
   await page.context().close();
+  // 10. a quiz checkpoint (QA pass, 25 Nov 2026): the card beside (landscape) or under (portrait) the monitor, never over it,
+  // Check answers in view without scrolling inside the card, Reveal locked; answered by taps
+  if(h>=820){const q=await open(w,h,'?case=sevo&quiz=1');await q.evaluate(()=>{tlRun(story.t0+350-simT);dirty=true;});
+   await q.waitForSelector('#quizCard:not([hidden]) #quizCheck');await q.waitForTimeout(300);
+   const a=await box(q,'#advWrap'),c=await box(q,'#quizCard'),b=await box(q,'#quizCheck');
+   assert.ok(land?c.x>=a.r-1:c.y>=a.b-1,`${tag}: quiz card ${land?'beside':'under'} the monitor ${JSON.stringify({a,c})}`);
+   assert.ok(b.y>=0&&b.b<=h+1,`${tag}: Check answers in view ${JSON.stringify(b)}`);
+   assert.ok(await q.evaluate(()=>{const c=$('quizCard');return c.scrollHeight-c.clientHeight<=1;}),`${tag}: no scrolling inside the card`);
+   assert.ok(await q.locator('#revealBtn').isDisabled(),`${tag}: Reveal locked at the checkpoint`);
+   for(const n of ['phase','agent','arousal'])await tap(q,`#quizForm input[name=q_${n}][value="0"]`);
+   await tap(q,'#quizCheck');assert.match(await q.textContent('#quizTitle'),/Checkpoint 1: \d of 3/,`${tag}: tap Check answers`);
+   await tap(q,'#quizNext');assert.equal(await q.evaluate(()=>paused),false,`${tag}: tap Continue`);
+   await q.context().close();}
   console.log(`ok ${tag}`);
  }
  // 9. home-screen app: manifest with its own id and scope, iOS meta, the install prompt cancelled

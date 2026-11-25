@@ -137,7 +137,8 @@ pumpBox.innerHTML=`<div class="pump-row pump-head"><b>TCI propofol</b>
 <p class="pump-read" id="pRead" aria-live="off"></p>
 <canvas id="pChart" class="pump-chart" aria-label="Plasma and effect-site concentration over the last 15 minutes" role="img"></canvas>
 <div class="pump-line" id="pKetLine" role="group" aria-label="Ketamine"><div class="pump-row pump-head"><b>Ketamine</b><span class="pump-ce" id="pKetCe">Ce 0.00 µg/ml</span></div>
- <div class="pump-row"><label>Bolus <input id="pKetBol" type="number" min="0.05" max="2" step="0.05" value="0.5"> mg/kg</label><button type="button" class="pump-give" id="pKetGive">Give</button></div>
+ <div class="pump-row"><label>Bolus <input id="pKetBol" type="number" min="0.1" max="2" step="0.05" value="0.5"> mg/kg</label><button type="button" class="pump-give" id="pKetGive">Give</button></div>
+ <p class="pump-msg" id="pKetMsg" role="status" aria-live="polite"></p>
  <label class="pump-row pump-slider"><span>Infusion <output id="pKetInfV">0.00</output> mg/kg/h</span><input id="pKetInf" type="range" min="0" max="3" step="0.05" value="0"></label>
  <canvas id="pKetChart" class="pump-chart small" aria-label="Ketamine effect-site concentration over the last 15 minutes" role="img"></canvas></div>
 <div class="pump-line" id="pDexLine" role="group" aria-label="Dexmedetomidine"><div class="pump-row pump-head"><b>Dexmedetomidine</b><span class="pump-ce" id="pDexCe">Ce 0.00 ng/ml</span></div>
@@ -165,7 +166,8 @@ function pumpUI(){pumpBox.hidden=!PUMP.on;workspace.dataset.pump=PUMP.on?'on':'o
 function pumpRead(){if(!PUMP.on)return;const mlh=PUMP.r*60/TCI_SET.conc;
  $('pRead').textContent=`Cp ${pf(pumpCp())} · Ce ${pf(pumpCe())} µg/ml · ${Math.round(mlh)} ml/h · ${Math.round(PUMP.mg)} mg`;pumpChart();
  const kl=PUMP.k,xl=PUMP.x,run=L=>L.left>1e-9?` · ${L===kl?'bolus':'loading'} running`:'';
- $('pKetCe').textContent=`Ce ${kdxCe(kl).toFixed(2)} µg/ml · ${Math.round(kl.tot)} mg${run(kl)}`;
+ $('pKetCe').textContent=`Ce ${kdxCe(kl).toFixed(2)} µg/ml · ${Math.round(kl.tot)} mg given${run(kl)}`;
+ const dg=$('pDexGive'),loading=xl.left>1e-9;if(dg.dataset.stop!==String(loading)){dg.dataset.stop=String(loading);dg.textContent=loading?'Stop load':'Load over 10 min';}
  $('pDexCe').textContent=`Ce ${kdxCe(xl).toFixed(2)} ng/ml · ${Math.round(xl.tot)} µg${run(xl)}`;
  kdxChart('pKetChart','ke','#e07ad0','µg/ml');kdxChart('pDexChart','xe','#7ad0a0','ng/ml');}
 // one add-on drug's predicted Ce over the last 15 minutes
@@ -201,17 +203,23 @@ $('pModel').onchange=e=>{PUMP.model=e.target.value;pumpModes();pumpUI();};
 const ptIn=()=>{const n=(id,lo,hi,d)=>{const v=+$(id).value;return v>=lo&&v<=hi?v:d;};
  PUMP.pt={sex:$('pSex').value,age:n('pAge',18,90,PUMP.pt.age),height:n('pHt',140,210,PUMP.pt.height),weight:n('pWt',40,160,PUMP.pt.weight)};pumpModes();};
 for(const id of ['pSex','pAge','pHt','pWt'])$(id).addEventListener('change',()=>{ptIn();pumpUI();});
-$('pReset').onclick=()=>pumpStart();
+$('pReset').onclick=()=>{pumpStart();$('storyCap').textContent='';if(typeof caseUrl==='function')caseUrl(null);}; // Reset ends a case: no caption, no ?case=
 // a manual change ends any case or demo and clears its caption, so an old Induce or Emerge caption never sits beside a new
 // target (owner, 25 Nov 2026: "Emergence: drug targets are zero" stayed up at a 6.3 µg/ml target)
-const pumpManual=()=>{stopStory();$('storyCap').textContent='';},pumpAddOn=()=>{if(!story)$('storyCap').textContent='';};
+const pumpManual=()=>{if(story?.case&&typeof caseUrl==='function')caseUrl(null);stopStory();$('storyCap').textContent='';},pumpAddOn=()=>{if(!story)$('storyCap').textContent='';};
 $('pTgt').addEventListener('input',e=>{pumpManual();pumpSet({target:+e.target.value});});
 $('pSevo').addEventListener('input',e=>{pumpManual();pumpSet({sevoEt:+e.target.value});});
 // the add-on lines can be used during a case without stopping it (giving ketamine or dex on top of the case's propofol)
 $('pKetInf').addEventListener('input',e=>{pumpAddOn();pumpSet({ketInf:+e.target.value});});
-$('pDexInf').addEventListener('input',e=>{pumpAddOn();pumpSet({dexInf:+e.target.value});});
-$('pKetGive').onclick=()=>{pumpAddOn();const v=+$('pKetBol').value;if(v>0&&v<=2)pumpSet({ketBolus:v});pumpRead();};
-$('pDexGive').onclick=()=>{pumpAddOn();const v=+$('pDexLoad').value;if(v>0&&v<=2)pumpSet({dexLoad:v});pumpRead();};
+// infusion 0 also stops a loading dose that is still running (QA pass, 25 Nov 2026: only Emerge or Reset stopped it)
+$('pDexInf').addEventListener('input',e=>{pumpAddOn();const v=+e.target.value;if(!v)PUMP.x.left=0;pumpSet({dexInf:v});pumpRead();});
+// ketamine bolus 0.1-2 mg/kg: out of range is clamped in the box with a message and not given; repeat doses are allowed and the
+// line shows the total given (QA pass, 25 Nov 2026: 50 mg/kg was silently ignored)
+$('pKetGive').onclick=()=>{pumpAddOn();const el=$('pKetBol'),raw=+el.value,msg=$('pKetMsg');
+ if(!(raw>=0.1&&raw<=2)){const v=Math.min(2,Math.max(0.1,isFinite(raw)?raw:0.5));el.value=v;msg.textContent=`Bolus 0.1 to 2 mg/kg: set to ${v}. Tap Give to give it.`;return;}
+ msg.textContent='';pumpSet({ketBolus:raw});pumpRead();};
+$('pDexGive').onclick=()=>{pumpAddOn();if(PUMP.x.left>1e-9){PUMP.x.left=0;pumpRead();return;} // Stop load
+ const v=+$('pDexLoad').value;if(v>0&&v<=2)pumpSet({dexLoad:v});pumpRead();};
 $('pRemi').addEventListener('input',e=>{pumpManual();pumpSet({remi:+e.target.value});});
 // Emerge: every pump target to zero; the predicted levels then fall by the model (propofol) and the engine's lag (the rest)
 $('wakeBtn').addEventListener('click',()=>{if(PUMP.on){PUMP.k.left=PUMP.x.left=0;pumpSet({target:0,sevoEt:0,remi:0,ketInf:0,dexInf:0});}});
