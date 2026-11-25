@@ -44,9 +44,23 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
   - Emerge stops both infusions and any dose still running. A 2 mg/kg ketamine bolus peaks near 5.5 µg/ml (level capped at 1).
   - Ketamine bolus 0.1 to 2 mg/kg: an entry outside is clamped with a message and not given; the line shows the mg given so
     far. The dex load key turns into Stop load while it runs; a dex infusion of 0 also stops a running load.
-- Induce sets Ce 3.5; Emerge sets every target to zero (propofol then falls by the model). Choosing another agent or a
+- Induce sets Ce 6, then 3.5 after 150 s (BIS dips into the 20s with some suppression for about a minute, then the 40s); Emerge sets every target to zero (propofol then falls by the model). Choosing another agent or a
   combination turns the pump off; manual depth works as before. The timeline saves and restores the pump; drug marks on the
   bar follow pump settings, not every step.
+- Owner's flow changes (25 Nov 2026):
+  - Induce deep for laryngoscopy: Ce 6 for 150 s, then 3.5 (owner: "very deep very fast initially for the laryngoscopy", "a bit
+    of like 20s initially"). Measured: lowest BIS 20-26 at about 2-3 min, SR up to about 50%, then 40-47 by 5 min. The cases
+    induce at Ce 6 (propofol + dex, older patient: 5) and come down at 170 s.
+  - "Opioid on board" box on the pump, ticked by default (owner: "assume that there's always some opioids involved"): about
+    remifentanil 2 ng/ml or fentanyl 2 µg/kg. With a hypnotic it adds 0.03 depth (BIS about 3 lower, so the same BIS at a lower
+    propofol Ce and waking at a lower Ce) and blunts the surgical response by 0.35 (remifentanil 4 ng/ml blunts it fully).
+    Alone it does nothing. Emerge leaves it on. The cases untick it: they give their own remifentanil and teach the incision.
+  - The BIS Advance trend and DSA start empty, at page open and at a case's 0 min, and fill from the left; the 5 min awake
+    pre-roll still runs so the index and raw EEG are settled.
+  - After Emerge the sim pauses once the index is back to 90 (the owner asked for about 95; the sim's awake index sits at
+    90-93). A new target, sevoflurane, a case or Induce cancels it.
+  - Above 1x the whole raw trace is redrawn when the state moves (index depth 0.03, a band 1.5 dB, suppression, a stimulus,
+    relaxant, warmer; at most every 0.4 s), so at 60x the left half never shows the old state (owner). At 1x it sweeps as before.
 - Default model Schnider (25 Nov 2026, the owner: emergence "way too slow", induction "on the slow side"). Measured on
   /workshop/ with 10 min at Ce 3.5 then Emerge (40 y, 170 cm, 70 kg): Eleveld BIS < 60 at 143 s and BIS > 80 at 648 s;
   Schnider 74 s and 230 s; Marsh 167 s and 530 s. Eleveld's slow ke0 (0.146/min) drives both; the EEG follows the pump's Ce
@@ -82,7 +96,7 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 - Captions (QA pass, 25 Nov 2026): outside the quiz the teaching caption always shows, masked or not, without a step count
   in a case; Reveal and Blind redraw it. In a quiz case no caption and no step count show at all; the answer card lists the
   captions so far under "What happened". A rewind on the timeline, the pump's Reset and the blank case clear the caption.
-- `tci` Propofol TCI (Schnider, Ce 4 then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
+- `tci` Propofol TCI (Schnider, Ce 6, then 4, then 3.5 µg/ml): awake, induction, relaxant, maintenance, skin incision (alpha dropout, then
   18-Hz activity and SEF95 rising), treatment (remifentanil 3 ng/ml, Ce 4), maintenance, emergence.
 - `sevo` Sevoflurane (end-tidal 2.4% induction, 1.8% maintenance, about 1 MAC at 45 years): the same phases.
 - `propket` Propofol + ketamine: maintenance, then ketamine on the pump's ketamine line (0.5 mg/kg bolus plus 0.5 mg/kg/h,
@@ -199,7 +213,8 @@ to run it with iPads for the participants").
 - 60x on an iPad-class CPU: in Chromium with a 4x CPU throttle the sim clock holds 60x (60.1-60.3x); frames drop to about
   27-33 per second (p95 33-67 ms, a rare 117 ms frame, over the 100 ms step cap). At 6x throttle it still runs at 55-57x.
 - Measured (wall time to BIS under 60, held 10 sim s; 1x / 10x / 60x): Induce (pump to 3.5) 136-139 s / 14.2-14.4 s /
-  2.5-2.6 s; pump target 6 117-121 s / 11.4-11.8 s / 2.0 s.
+  2.5-2.6 s; pump target 6 117-121 s / 11.4-11.8 s / 2.0 s. With Schnider and Induce at Ce 6 (25 Nov 2026): Induce 60-62 s /
+  6.1 s / 1.0 s; 60x under a 4x throttle still runs at 60x.
 - Test: `test/workshop-speed.e2e.mjs` clicks the real keys (layout at iPad and phone sizes, timings, DSA columns per second
   scale with speed while the raw EEG feed stays at 128 samples a second, 60x under a 4x throttle).
 - Test (QA pass): `test/workshop-qa.e2e.mjs` uses real clicks for the locks, captions, address, speed, pump, Alpha dropout,

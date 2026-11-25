@@ -155,7 +155,7 @@ body.ws-page{
 .ws-page #monitor .pump-head b,.ws-page #monitor .pump-line b{font-size:18px;color:var(--n-navy)}
 .ws-page #monitor .pump-read{font-size:16px;color:var(--n-ink)}
 .ws-page #monitor .pump-ce{font-size:15px;color:var(--n-ink)}
-.ws-page #monitor .pump-slider small,.ws-page #monitor .pump-note{font-size:14px;color:var(--n-muted)}
+.ws-page #monitor .pump-slider small,.ws-page #monitor .pump-check small,.ws-page #monitor .pump-note{font-size:14px;color:var(--n-muted)}
 .ws-page #monitor .pump select,.ws-page #monitor .pump input[type=number]{min-height:44px;border-color:#7a8594;border-radius:5px;background:#fff;color:var(--n-ink)}
 .ws-page #monitor .pump-mode button,.ws-page #monitor .pump-reset{min-height:44px;font-size:16px;border-color:#7a8594;color:var(--n-ink)}
 .ws-page #monitor .pump-mode button[aria-pressed=true]{background:var(--n-navy);border-color:var(--n-navy);color:#fff}

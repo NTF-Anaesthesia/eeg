@@ -6,14 +6,17 @@
 // Loaded after pump.js. Deep link: ?case=<id> (with ?blind=1 for blinded reading; quiz checkpoints live in quiz.js).
 // Patterns follow the engine's rules (app.js): surgical stimulus = 100 s; 'alpha' dips the alpha band, 'beta' adds 18-Hz activity
 // (García 2021, Hight 2019); remifentanil blunts it; ketamine adds fast activity and can raise BIS without lightening.
+// Induction goes deep for laryngoscopy, then the target comes down at 170 s (owner, 25 Nov 2026). The "Opioid on board" box is
+// off in the cases: they give their own remifentanil, and a background opioid would blunt the incision they teach.
 // Synthetic teaching cases only: not real patients, doses or timings to copy.
 // relaxant: the page's 'on' mode holds a full block through surgery (no facial EMG); reversal returns to 'off'
 const relax=()=>setNmb('on'),reverse=()=>setNmb('off');
 const CASES={
  tci:{label:'Propofol TCI: induction to emergence',pt:{sex:'M',age:45,height:172,weight:72},model:'schnider',steps:[
   {at:0,pump:{target:0},cap:'Awake baseline before induction. Note the raw EEG, the DSA and SEF95.',ev:'Awake baseline.'},
-  {at:40,pump:{target:4},cap:'Induction: propofol TCI, Schnider effect-site target 4 µg/ml. The pump runs fast, then the effect site catches up; slow-delta and alpha power build.',ev:'Induction.'},
+  {at:40,pump:{target:6},cap:'Induction: propofol TCI, Schnider effect-site target 6 µg/ml, deep for laryngoscopy. The pump runs fast, then the effect site catches up; slow-delta and alpha power build.',ev:'Induction.'},
   {at:110,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
+  {at:170,pump:{target:4},cap:'Intubated: target down to 4 µg/ml.',ev:'Target lowered.'},
   {at:360,pump:{target:3.5},cap:'Maintenance at 3.5 µg/ml: the alpha and slow-delta bands are steady, SEF95 is low.',ev:'Maintenance.'},
   {at:600,stim:'alpha',cap:'Skin incision. Watch the alpha band: it weakens while the hypnotic target is unchanged (alpha dropout).',ev:'Skin incision.'},
   {at:650,stim:'beta',cap:'The stimulation continues: faster activity grows and SEF95 rises. Consistent with nociceptive arousal; check the clinical signs too.',ev:'Surgery continues.'},
@@ -34,8 +37,9 @@ const CASES={
   {at:1800,end:true,cap:'Case complete. Drag the timeline back to compare the phases.',ev:'Case complete.'}]},
  propket:{label:'Propofol + ketamine: a high BIS that is not emergence',pt:{sex:'M',age:50,height:175,weight:80},model:'schnider',steps:[
   {at:0,pump:{target:0},cap:'Awake baseline before induction.',ev:'Awake baseline.'},
-  {at:40,pump:{target:4},cap:'Induction: propofol TCI, effect-site target 4 µg/ml.',ev:'Induction.'},
+  {at:40,pump:{target:6},cap:'Induction: propofol TCI, effect-site target 6 µg/ml, deep for laryngoscopy.',ev:'Induction.'},
   {at:110,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
+  {at:170,pump:{target:4},cap:'Intubated: target down to 4 µg/ml.',ev:'Target lowered.'},
   {at:360,pump:{target:3.5},cap:'Maintenance at 3.5 µg/ml: alpha and slow-delta bands, BIS in the usual range.',ev:'Maintenance.'},
   {at:480,pump:{ketBolus:0.5,ketInf:0.5},cap:'Ketamine added: 0.5 mg/kg bolus, then 0.5 mg/kg/h (Domino model Ce on the pump). Fast beta-gamma activity appears, alpha weakens, SEF95 and BIS rise, at the same propofol target.',ev:'Drug given.'},
   {at:780,pump:{ketInf:0},cap:'Ketamine infusion stopped: its effect wears off over several minutes and the propofol pattern returns.',ev:'Drug stopped.'},
@@ -43,19 +47,23 @@ const CASES={
   {at:1800,end:true,cap:'Case complete. Compare the ketamine period with emergence: both raise BIS and SEF95, but the DSA differs.',ev:'Case complete.'}]},
  propdex:{label:'Propofol + dexmedetomidine',pt:{sex:'F',age:60,height:160,weight:65},model:'schnider',steps:[
   {at:0,pump:{target:0},cap:'Awake baseline before induction.',ev:'Awake baseline.'},
-  {at:40,pump:{target:3.5},cap:'Induction: propofol TCI, effect-site target 3.5 µg/ml (an older patient).',ev:'Induction.'},
+  {at:40,pump:{target:5},cap:'Induction: propofol TCI, effect-site target 5 µg/ml for laryngoscopy (an older patient).',ev:'Induction.'},
   {at:110,act:relax,cap:'Relaxant given after loss of consciousness.',ev:'Relaxant given.'},
+  {at:170,pump:{target:3.5},cap:'Intubated: target down to 3.5 µg/ml.',ev:'Target lowered.'},
   {at:360,cap:'Maintenance at 3.5 µg/ml: alpha and slow-delta bands.',ev:'Maintenance.'},
   {at:420,pump:{dexLoad:1,dexInf:0.5},cap:'Dexmedetomidine added: 1 µg/kg over 10 min, then 0.5 µg/kg/h (Hannivoort model Ce on the pump). Its effect builds slowly: more slow activity and spindle-like bursts, a weaker, slower alpha band, faster activity falls.',ev:'Drug given.'},
   {at:1080,pump:{target:2.5},cap:'Propofol target lowered to 2.5 µg/ml with the dexmedetomidine running. Assess the whole picture (DSA, raw EEG, suppression, clinical signs), not one number.',ev:'Maintenance adjusted.'},
   {at:1200,pump:{target:0,dexInf:0},act:reverse,cap:'Emergence: both stopped, relaxant reversed. Dexmedetomidine leaves slowly, so slow activity can linger.',ev:'Anaesthetic stopped; relaxant reversed.'},
   {at:1800,end:true,cap:'Case complete. Drag the timeline back to compare propofol alone with propofol and dexmedetomidine.',ev:'Case complete.'}]}
 };
-// start a case: awake pre-roll so the screens open full, a fresh timeline, the pump set for this patient, then the steps
+// the BIS Advance trend and DSA start empty at the case's 0 min and fill from the left (owner, 25 Nov 2026: "at the start, like
+// 0 minutes, there should be nothing on the DSA"); the awake pre-roll still runs so the index and the raw EEG are settled
+function wsTrendStart(){ADV.pre=null;ADV.review=null;ADV.win=5;ADV.t0=ADV.cut=Math.floor(simT);ADV.hc=null;if(typeof advInval==='function')advInval();}
+// start a case: awake pre-roll so the index and raw EEG are settled (the trend starts empty), a fresh timeline, the pump set for this patient, then the steps
 function startCase(id){const c=CASES[id];if(!c||TL.busy)return false;stopStory();learningFocus=null;
  nmReset();setNmb('off');mods.elderly=mods.emg=mods.diathermy=mods.blink=mods.warmer=false;for(const [k,el] of SMODS)$(el).checked=false;$('mElder').checked=false;
- eng.stT=R.eng.stT=0;pumpStart();PUMP.model=c.model;PUMP.pt=Object.assign({},c.pt);pumpModes();pumpUI();snapAll();
- step(300*FS);stepR(300*FS);simT+=300;ADV.pre=null;ADV.cut=null;ADV.review=null;ADV.win=5;ADV.t0=simT-300;ADV.hc=null;
+ eng.stT=R.eng.stT=0;pumpStart();PUMP.opioid=false;PUMP.model=c.model;PUMP.pt=Object.assign({},c.pt);pumpModes();pumpUI();snapAll();
+ step(300*FS);stepR(300*FS);simT+=300;wsTrendStart();
  TL.snaps=[];TL.events=[];TL.key='';TL.t0=simT;TL.max=simT;tim.sup=tim.low=R.tim.sup=R.tim.low=0;PUMP.hist=[];
  story={t0:simT,i:-1,case:id,steps:c.steps};runStory();tlSnap();tlAfter();if(!window.speedPicked)setSpeed(5);if(paused)$('pause').click();
  caseSel.value=id;syncDemoControls();caseUrl(id);return true;}

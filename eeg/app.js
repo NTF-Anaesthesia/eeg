@@ -47,8 +47,10 @@ function baseTarget(drug,d){
 // Drug mix (a teaching approximation, not an interaction model): propofol (effect-site ug/ml) and sevoflurane (MAC)
 // add into one hypnotic depth; remifentanil (ng/ml), dexmedetomidine and N2O deepen it a little; then ketamine,
 // dexmedetomidine, remifentanil and N2O each add their own EEG signature on top.
-const MIX0={propofol:0,sevo:0,ketamine:0,dex:0,remi:0,n2o:0};
-const MIXMAX={propofol:8,sevo:2,remi:8,ketamine:1,dex:1,n2o:0.7}; // slider ranges
+// opioid: a background opioid on board (0 or 1; the pump's "Opioid on board" box, owner 25 Nov 2026), about remifentanil 2 ng/ml or
+// fentanyl 2 µg/kg: a little extra depth with a hypnotic, part of the response to surgery blunted, waking at a lower propofol Ce
+const MIX0={propofol:0,sevo:0,ketamine:0,dex:0,remi:0,n2o:0,opioid:0};
+const MIXMAX={propofol:8,sevo:2,remi:8,ketamine:1,dex:1,n2o:0.7,opioid:1}; // slider ranges
 const MAC=[[0,0],[0.3,0.3],[0.5,0.44],[1,0.6],[1.5,0.76],[2,0.88]]; // sevoflurane MAC -> depth
 function sevoDepth(mac){let i=0;while(i<MAC.length-2&&mac>MAC[i+1][0])i++;const [x0,y0]=MAC[i],[x1,y1]=MAC[i+1];return y0+(y1-y0)*cl((mac-x0)/(x1-x0));}
 function mixTarget(m,bsShift){
@@ -57,7 +59,8 @@ function mixTarget(m,bsShift){
  const dP=m.propofol*0.155,dS=sevoDepth(m.sevo),sh=dP+dS>0?dS/(dP+dS):0,sum=dP+dS,top=1-0.05*sh,
   hyp=sum<=0.9?sum:0.9+(top-0.9)*(1-Math.exp(-(sum-0.9)/0.35)),on=hyp>0.05?1:0;
  // remifentanil: no BIS effect before stimulation (Guignard 2000); only high doses deepen
- const dH=cl(hyp+0.004*Math.max(0,m.remi-4)+0.12*m.dex*on+0.15*m.n2o);
+ // a background opioid adds 0.03 with a hypnotic (BIS about 3 lower: alone it barely moves BIS, with propofol the same BIS comes at a lower Ce)
+ const dH=cl(hyp+0.004*Math.max(0,m.remi-4)+0.03*(m.opioid||0)*on+0.12*m.dex*on+0.15*m.n2o);
  const a=baseTarget('propofol',dH),b=baseTarget('sevo',dH),p={};
  for(const k of KEYS)p[k]=a[k]*(1-sh)+b[k]*sh;
  if(bsShift){const d2=cl(dH+bsShift);p.bs=baseTarget('propofol',d2).bs*(1-sh)+baseTarget('sevo',d2).bs*sh;}
@@ -84,7 +87,7 @@ function target(drug,d,mods){mods=mods||{};
  // one-sided change (the Asymmetry control): the affected hemisphere's EEG slows, as with unilateral ischaemia or a regional block effect
  if(mods.asym&&mods.asym===mods.side){p.alpha*=0.35;p.beta*=0.45;p.gamma*=0.45;p.slow+=18;p.delta+=6;}
  // facial EMG; an opioid blunts the response to surgery, so less of it
- if(mods.emg){p.emg=Math.max(p.emg,6*(drug==='mix'?Math.max(0.25,1-(d.remi||0)/6):1)*(1-nk));}
+ if(mods.emg){p.emg=Math.max(p.emg,6*(drug==='mix'?Math.max(0.25,1-((d.remi||0)+2*(d.opioid||0))/6):1)*(1-nk));}
  // relaxant stage 2 (Engine nmbS, after ~60 s in a light patient): fast power falls further, slow waves appear (Schuller 2015)
  const ns=mods._nmbSlow||0;if(ns>0){p.beta*=1-0.6*ns;p.gamma*=1-0.8*ns;p.betaF-=3*ns;p.slow+=25*ns;p.delta+=8*ns;}
  return p;
@@ -130,7 +133,7 @@ const TAU_UP=12,TAU_DOWN=120;
 const tauUp=()=>TAU_UP;
 // case length (owner, 14 Oct 2026): the effect site empties more slowly after a long case, drug by drug (context-sensitive half-time).
 // Time constant = TAU_DOWN x (1 + (L-1) x CSENS): L 1 short, 2.5 medium, 5 long; remifentanil and N2O do not accumulate.
-const CASEL={short:1,medium:2.5,long:5},CSENS={propofol:0.9,sevo:0.5,ketamine:0.4,dex:0.9,remi:0,n2o:0};
+const CASEL={short:1,medium:2.5,long:5},CSENS={propofol:0.9,sevo:0.5,ketamine:0.4,dex:0.9,remi:0,n2o:0,opioid:0};
 const tauDown=(q,m)=>TAU_DOWN*(1+((CASEL[m&&m.caseLen]||1)-1)*(CSENS[q]??0.9));
 const cloneD=d=>typeof d==='number'?d:Object.assign({},MIX0,d);
 // is the patient 'induced' (asleep enough that a relaxant would be given)? Hysteresis: given at 0.30, reversed under 0.25.
@@ -186,9 +189,9 @@ class Engine{
   if(typeof de==='number')this.de+=(this.d-de)*(this.d>de?au:dt/tauDown(this.drug,m));else for(const q in MIX0){const t=this.d[q]||0;de[q]+=(t-de[q])*(t>de[q]?au:dt/tauDown(q,m));}
   this.updNmb();
   const tg=target(this.drug,this.de,m); const k=dt/8; // ~8 s time constant: the spectrum glides to the effect-site state
-  // surgical stimulus (García 2021, Hight 2019), blunted by remifentanil b = remi/4 (mix only): light (dH < 0.5) beta at
+  // surgical stimulus (García 2021, Hight 2019), blunted by remifentanil b = remi/4 plus 0.35 for a background opioid (mix only): light (dH < 0.5) beta at
   // 18 Hz and facial EMG; deeper the alpha band dips 4.5 dB (3.4 dB measured over 8-13 Hz; 3.5 dB was lost in the shaped noise), or 1 in 10 a paradoxical delta arousal (BIS falls)
-  if(this.stT>0){this.stT-=dt;const u=1-(this.drug==='mix'?cl((this.de.remi||0)/4):0),dh=tg.dH??this.de;
+  if(this.stT>0){this.stT-=dt;const u=1-(this.drug==='mix'?cl((this.de.remi||0)/4+0.35*(this.de.opioid||0)):0),dh=tg.dH??this.de;
    if(this.stK==='beta'||this.stK!=='alpha'&&this.stK!=='delta'&&dh<0.5){tg.ar+=8*u;if(!m.nmb)tg.emg=Math.max(tg.emg,6*u);}else if(this.stK==='delta'){tg.delta*=1+u;tg.beta*=1-0.5*u;}else tg.alpha*=10**(-0.45*u);}
   for(const key of KEYS)this.p[key]+=(tg[key]-this.p[key])*k;
   // relaxant stage 2: starts 60 s after the relaxant, only while the hypnotic is light; τ 120 s on, 30 s off
@@ -352,6 +355,17 @@ let deng=null; // made on first use, so the page's start-up random draws are unc
 function dispFollow(D,E){D.drug=E.drug;D.d=cloneD(E.d);D.de=cloneD(E.de);D.deSet=true;D.mods=Object.create(E.mods||{});D.nmbOn=E.nmbOn;
  Object.assign(D.p,E.p);D.nmbT=E.nmbT;D.nmbS=E.nmbS;D.tone=E.tone;D.wa=E.wa;D.stT=E.stT;D.stK=E.stK;D.eyeK=E.eyeK;}
 function dispGen(n){if(!deng)deng=new Engine();dispFollow(deng,eng);for(let i=0;i<n;i++){DSIG.push(deng.sample());if(DSIG.length>SIGMAX)DSIG.shift();dProduced++;}}
+// The whole raw trace is redrawn when the state changes (owner, 25 Nov 2026: at 60x the left half of the trace still showed what
+// was happening before). Above 1x, once the effect-site state has moved since the last redraw (index depth 0.03, a band 1.5 dB,
+// suppression, a stimulus, the relaxant or the warmer), the display engines refill the visible seconds from the current state at
+// once, at most every 0.4 s of real time. At 1x the trace is the sim's own signal and sweeps through as it happens.
+let dispKey=null,dispLast=-1e9;
+function dispSig(E){const p=E.p,L=v=>Math.log10(Math.max(0,v)+1e-3);return [p.dH??0,L(p.alpha),L(p.slow+p.delta+p.theta),L(p.beta+p.gamma+p.ar),L(p.emg),p.bs,E.stT>0?1:0,E.nmbOn?1:0,E.wa>0.5?1:0];}
+function dispMoved(a,b){if(!a)return true;if(Math.abs(a[0]-b[0])>0.03||Math.abs(a[5]-b[5])>0.05)return true;
+ for(let i=1;i<5;i++)if(Math.abs(a[i]-b[i])>0.15)return true;for(let i=6;i<a.length;i++)if(a[i]!==b[i])return true;return false;}
+function dispRefill(){const secs=Math.max(8,mon.skin==='advance'&&typeof advSecs==='function'?advSecs():8),n=Math.min(SIGMAX,Math.round(secs*FS));
+ // the refill does not count as produced samples (dProduced is the real-time sweep clock)
+ const one=()=>{const p=dProduced;DSIG.length=0;dispGen(n);dProduced=p;};one();swapCh();try{one();}finally{swapCh();}dispKey=dispSig(eng);}
 const stimAll=kind=>{const k=kind??(Math.random()<0.1?'delta':'');eng.stimulus(k);R.eng.stimulus(k);};
 const snapAll=()=>{eng.snap();R.eng.snap();};
 // monitor settings: smoothing (s), EEG scale (± uV), teaching labels and target band, the info message
@@ -887,7 +901,8 @@ function frame(now){requestAnimationFrame(frame);try{frameBody(now);}catch(e){co
 function frameBody(now){const dt=Math.min(0.1,(now-last)/1000);last=now;
  if(!paused){const target=simT+dt*speed;const need=Math.floor(target*FS)-Math.floor(simT*FS);simT=target;nmStep(dt*speed);if(typeof pumpStep==='function')pumpStep(dt*speed);
   mirror=speed===1;try{step(need);stepR(need);}finally{mirror=true;}
-  if(speed!==1){const dn=Math.floor((dispT+dt)*FS)-Math.floor(dispT*FS);dispGen(dn);swapCh();try{dispGen(dn);}finally{swapCh();}}
+  if(speed!==1){const dn=Math.floor((dispT+dt)*FS)-Math.floor(dispT*FS);dispGen(dn);swapCh();try{dispGen(dn);}finally{swapCh();}
+   if(now-dispLast>400&&dispMoved(dispKey,dispSig(eng))){dispRefill();dispLast=now;}}
   dispT+=dt;runStory();}
  if(typeof tlTick==='function')tlTick();
  if(mon.skin==='advance')advTick(dirty);
