@@ -21,16 +21,17 @@ function tlSetUi(u){learningFocus=u.learningFocus??null;const choice=u.exampleCh
  selectedMix=u.selectedMix||'tiva';selectedMixVariant=u.selectedMixVariant??MIX_LESSONS[selectedMix].initial;Object.assign(mix,u.mix);$('depth').value=u.dv;lastSingle=u.lastSingle;
  if(u.mode==='mix'){showMode('mix');drug='mix';depth=mix;syncMix();applyTarget();}else setDrug(u.drug);}
 function tlSnap(){const L=tlChan();swapCh();let Rr;try{Rr=tlChan();}finally{swapCh();}
- TL.snaps.push({t:simT,L,R:Rr,nm:Object.assign({},nm),story:story?Object.assign({},story):null,ui:tlUi()});
+ TL.snaps.push({t:simT,L,R:Rr,nm:Object.assign({},nm),story:story?Object.assign({},story):null,ui:tlUi(),pump:typeof pumpSave==='function'?pumpSave():null});
  if(TL.snaps.length>600)TL.snaps.splice(1,1);} // about 5 h; the first save point (the start of the case) is kept
-function tlKey(){return drug+'|'+JSON.stringify(depth)+'|'+[mods.elderly,mods.emg,mods.diathermy,mods.blink,mods.nmbMode].join();}
+// with the TCI pump on, the mix changes every step: mark the pump's settings instead
+function tlKey(){return drug+'|'+(typeof PUMP!=='undefined'&&PUMP.on?'pump|'+pumpKey():JSON.stringify(depth))+'|'+[mods.elderly,mods.emg,mods.diathermy,mods.blink,mods.nmbMode].join();}
 // called by app.js's frame loop after each step: save points, drug-change marks on the bar
 function tlTick(){if(TL.busy)return;if(TL.t0==null){TL.t0=simT;tlSnap();}
  const last=TL.snaps[TL.snaps.length-1];if(simT-last.t>=TL.step)tlSnap();
  const k=tlKey();if(k!==TL.key){if(TL.key)TL.events.push(simT);TL.key=k;}
  if(simT>TL.max)TL.max=simT;const now=performance.now();if(!(now-TL._d<250)){TL._d=now;tlDraw();}}
 // run the simulation on by `secs` seconds of simulated time, in 1 s steps (no screen updates in between)
-function tlRun(secs){for(let s=0;s<secs;s++){const need=Math.floor((simT+1)*FS)-Math.floor(simT*FS);simT+=1;nmStep(1);step(need);stepR(need);runStory();
+function tlRun(secs){for(let s=0;s<secs;s++){const need=Math.floor((simT+1)*FS)-Math.floor(simT*FS);simT+=1;nmStep(1);if(typeof pumpStep==='function')pumpStep(1);step(need);stepR(need);runStory();
   const last=TL.snaps[TL.snaps.length-1];if(simT-last.t>=TL.step)tlSnap();}}
 function tlAfter(){dirty=true;
  // marks made in the dropped part of the case go too
@@ -47,7 +48,7 @@ function tlJump(T){if(TL.busy)return;T=Math.round(T);const lo=TL.snaps.length?TL
  if(T<simT){let i=TL.snaps.length-1;while(i>0&&TL.snaps[i].t>T-20)i--;const s=TL.snaps[i];
   stopStory();tlSetUi(s.ui);
   tlSetChan(s.L,mods);swapCh();try{tlSetChan(s.R,modsR);}finally{swapCh();}
-  Object.assign(nm,s.nm);story=s.story?Object.assign({},s.story):null;if(story)storyButtonUI('Stop demonstration');
+  if(typeof pumpLoad==='function'){if(s.pump)pumpLoad(s.pump);else pumpOff();}Object.assign(nm,s.nm);story=s.story?Object.assign({},s.story):null;if(story)storyButtonUI('Stop demonstration');
   simT=s.t;TL.snaps.length=i+1;TL.events=TL.events.filter(t=>t<=simT);}
  let left=Math.round(T-simT);const total=Math.max(1,left);
  const slice=()=>{const n=Math.min(left,60);tlRun(n);left-=n;tlDraw();const tn=$('tNow');tn._t=null;tn.textContent=`${Math.round(100*(1-left/total))}%`;if(left>0)setTimeout(slice,0);else finish();};
