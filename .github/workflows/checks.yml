@@ -42,6 +42,7 @@ jobs:
           - { name: EEG workshop (TCI pump), cmd: "node eeg/test/workshop-pump.e2e.mjs" }
           - { name: EEG workshop (cases), cmd: "node eeg/test/workshop-cases.e2e.mjs" }
           - { name: EEG workshop (quiz), cmd: "node eeg/test/workshop-quiz.e2e.mjs" }
+          - { name: EEG workshop (real-time EEG), cmd: "node eeg/test/workshop-realtime.e2e.mjs" }
     name: browser (${{ matrix.name }})
     steps:
       - uses: actions/checkout@v4

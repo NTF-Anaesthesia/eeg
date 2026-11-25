@@ -324,13 +324,13 @@ function sedEegInit(){const rnd=sedRng(20261014),gs=()=>{let u=0;while(u<1e-9)u=
  const mk=()=>({s:[0,0,0,0],p:[0,0,0,0],buf:new Float32Array(SED_RING)});
  SED.eg={n:0,gs,ch:[mk(),mk(),mk(),mk()],gain:[1,.94,1.06,.9]};
  SED.eg.n=Math.max(0,sedEegTarget()-SED_RING);}
-function sedEegTarget(){return typeof produced==='number'?Math.floor(produced*SED_FS/FS):0;}
+function sedEegTarget(){return typeof dProduced==='number'?Math.floor(dProduced*SED_FS/FS):0;} // real time at any sim speed (app.js DSIG)
 function sedEegPar(){const hl=HIST.length?HIST[HIST.length-1]:null,hr=R&&R.HIST&&R.HIST.length?R.HIST[R.HIST.length-1]:hl;
  return [hl,hr].map(c=>({emg:c?emgPct(c):0}));}
 // the engine's signal at a fractional sample position (linear interpolation); 0 before it starts
 function sedSigAt(sig,prod,t){const i=t-(prod-sig.length),i0=Math.floor(i);if(i0<0||i0>=sig.length)return 0;const f=i-i0,a=sig[i0],b=i0+1<sig.length?sig[i0+1]:a;return a+(b-a)*f;}
 function sedEegStep(){const E=SED.eg,gs=E.gs,P=E.par||(E.par=sedEegPar()),k=SED_RES,t=E.n*FS/SED_FS;
- const src=[sedSigAt(SIG,produced,t),R&&R.SIG?sedSigAt(R.SIG,R.produced,t):0];
+ const src=[sedSigAt(DSIG,dProduced,t),R&&R.DSIG?sedSigAt(R.DSIG,R.dProduced,t):0];
  for(let c=0;c<4;c++){const h=c%2,S=E.ch[c],em=P[h].emg;
   const stp=(i,r,x)=>{const y=r.a1*S.s[i]+r.a2*S.p[i]+x*r.g;S.p[i]=S.s[i];S.s[i]=y;return y;};
   const own=2.2*stp(1,k.mid,gs())+2.6*stp(2,k.beta,gs())+(.06+.1*em)*stp(3,k.emg,gs());

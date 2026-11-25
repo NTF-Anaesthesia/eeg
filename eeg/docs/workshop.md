@@ -38,7 +38,12 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 
 - A **Case** menu in a strip above the monitor, or `?case=tci|sevo|propket` (add `&blind=1` for blinded reading). A case runs
   a 5-minute awake pre-roll, starts a fresh timeline, sets the pump for its synthetic patient and plays at 5x; the timeline
-  works inside it. Choosing no case stops it.
+  works inside it. Choosing no case stops it. 5x stays: a 30-minute case then plays in about 6 minutes.
+- The raw EEG strip always sweeps at real time (25 mm/s morphology) on every screen and both hemispheres, whatever the speed;
+  the DSA, trends, SEF95, the index and the clock run at the sim speed. At 1x the strip is the engine's own signal (`SIG`); at
+  any other speed a display engine follows the live engine's drug, depth and state each frame and makes one frame's worth of
+  real-time samples into `DSIG`, with its own burst, blink and diathermy timers so they keep their real length. `SIG` is
+  never decimated. Check: `test/workshop-realtime.e2e.mjs`.
 - Steps run on the story mechanism (`runStory`): `steps` on the story object, plus `pump` (pump targets), `act` (relaxant on or
   reversed with the page's own relaxant modes) and `ev`, a neutral event line shown instead of the caption while blinded (no
   drug names or units, so it gives away neither the answer nor the agent).

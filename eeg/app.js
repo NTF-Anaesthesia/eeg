@@ -244,6 +244,11 @@ function fit(c,hLogical){const dpr=Math.min(2,window.devicePixelRatio||1);const 
 
 // ===== live simulation state =====
 let eng=new Engine();
+// DSIG: the raw EEG the screens draw. It always sweeps at real time (25 mm/s morphology) whatever the sim speed (owner, 25 Nov 2026):
+// at 1x it is SIG itself (step() copies each sample); at any other speed a display engine (deng) that follows eng's drug, depth and
+// state each frame makes frame-time x FS samples of its own, so bursts, blinks and diathermy keep their real length. SIG (spectrum,
+// BIS, DSA) still runs at the sim speed and is never decimated.
+let DSIG=[],dProduced=0,dispT=0,mirror=true;
 let SIG=[],EYE=[]; const SIGMAX=20*FS; // the EEG lane can sweep 4, 8 or 16 s (the BIS Advance screen, 20 s at 6.25 mm/s)
 let COLS=[]; const COLMAX=300; // one column per second, 5 min
 let HIST=[]; const HISTMAX=14400; // the same columns for the BIS VISTA screen's 5, 15 and 60 min trend windows and a 4 h case to review
@@ -272,14 +277,20 @@ function nmRead(){const t1=100*(1-nmD()),tofc=t1<6?0:t1<12?1:t1<18?2:t1<25?3:4,
 let artH=[],bcH=[],rawH=[],sefH=[],mfH=[];let prevSup=false,isoN=0,outN=0,outV=0,sefAge=0;let warming=true; // outV: out-of-target seconds for the Medtronic screen (any depth); not counted during the warm start
 // The right hemisphere (BIS Advance and SedLine): a second engine and its own copy of the per-channel state. The left channel
 // is the page's own variables; the right runs through swapCh(), which exchanges the two sets around a call to step().
-const R={eng:new Engine(),SIG:[],EYE:[],COLS:[],HIST:[],sup:[],bisS:null,lastSef:null,lastMf:null,produced:0,tim:{sup:0,low:0},
+const R={eng:new Engine(),deng:null,DSIG:[],dProduced:0,SIG:[],EYE:[],COLS:[],HIST:[],sup:[],bisS:null,lastSef:null,lastMf:null,produced:0,tim:{sup:0,low:0},
  artH:[],bcH:[],rawH:[],sefH:[],mfH:[],prevSup:false,isoN:0,outN:0,outV:0,sefAge:0};
-function swapCh(){[eng,R.eng]=[R.eng,eng];[SIG,R.SIG]=[R.SIG,SIG];[EYE,R.EYE]=[R.EYE,EYE];[COLS,R.COLS]=[R.COLS,COLS];[HIST,R.HIST]=[R.HIST,HIST];
+function swapCh(){[eng,R.eng]=[R.eng,eng];[deng,R.deng]=[R.deng,deng];[DSIG,R.DSIG]=[R.DSIG,DSIG];[dProduced,R.dProduced]=[R.dProduced,dProduced];[SIG,R.SIG]=[R.SIG,SIG];[EYE,R.EYE]=[R.EYE,EYE];[COLS,R.COLS]=[R.COLS,COLS];[HIST,R.HIST]=[R.HIST,HIST];
  [sup,R.sup]=[R.sup,sup];[bisS,R.bisS]=[R.bisS,bisS];[lastSef,R.lastSef]=[R.lastSef,lastSef];[lastMf,R.lastMf]=[R.lastMf,lastMf];[produced,R.produced]=[R.produced,produced];
  [tim,R.tim]=[R.tim,tim];[artH,R.artH]=[R.artH,artH];[bcH,R.bcH]=[R.bcH,bcH];[rawH,R.rawH]=[R.rawH,rawH];[sefH,R.sefH]=[R.sefH,sefH];[mfH,R.mfH]=[R.mfH,mfH];
  [prevSup,R.prevSup]=[R.prevSup,prevSup];[isoN,R.isoN]=[R.isoN,isoN];[outN,R.outN]=[R.outN,outN];[outV,R.outV]=[R.outV,outV];[sefAge,R.sefAge]=[R.sefAge,sefAge];}
 const modsR=Object.create(mods);modsR.side='R';mods.side='L'; // the right engine reads the page's settings, with its own side
 const stepR=n=>{swapCh();try{step(n);}finally{swapCh();}};
+// the display engine takes eng's slow state (drug, effect site, spectral profile, relaxant, muscle tone, warmer, stimulus, eye share)
+// and keeps its own oscillators and its own burst, spindle, blink and diathermy timers, which run at real time
+let deng=null; // made on first use, so the page's start-up random draws are unchanged
+function dispFollow(D,E){D.drug=E.drug;D.d=cloneD(E.d);D.de=cloneD(E.de);D.deSet=true;D.mods=Object.create(E.mods||{});D.nmbOn=E.nmbOn;
+ Object.assign(D.p,E.p);D.nmbT=E.nmbT;D.nmbS=E.nmbS;D.tone=E.tone;D.wa=E.wa;D.stT=E.stT;D.stK=E.stK;D.eyeK=E.eyeK;}
+function dispGen(n){if(!deng)deng=new Engine();dispFollow(deng,eng);for(let i=0;i<n;i++){DSIG.push(deng.sample());if(DSIG.length>SIGMAX)DSIG.shift();dProduced++;}}
 const stimAll=kind=>{const k=kind??(Math.random()<0.1?'delta':'');eng.stimulus(k);R.eng.stimulus(k);};
 const snapAll=()=>{eng.snap();R.eng.snap();};
 // monitor settings: smoothing (s), EEG scale (± uV), teaching labels and target band, the info message
@@ -295,7 +306,7 @@ function applyTarget(){eng.setTarget(drug,depth,mods);R.eng.setTarget(drug,depth
 const ceNow=()=>{const e=eng.de;return typeof e==='number'?cl(e):cl(0.155*(e.propofol||0)+sevoDepth(e.sevo||0)+0.5*(e.dex||0));};
 const EYE_REJ=0.85;
 function step(nSamples){
- for(let i=0;i<nSamples;i++){SIG.push(eng.sample());if(SIG.length>SIGMAX)SIG.shift();EYE.push(eng.eye);if(EYE.length>NWIN)EYE.shift();produced++;
+ for(let i=0;i<nSamples;i++){const v=eng.sample();SIG.push(v);if(SIG.length>SIGMAX)SIG.shift();if(mirror){DSIG.push(v);if(DSIG.length>SIGMAX)DSIG.shift();dProduced++;}EYE.push(eng.eye);if(EYE.length>NWIN)EYE.shift();produced++;
   if(produced%HOP===0&&SIG.length>=NWIN){
    // the DSA shows the raw spectrum; BIS, SEF and SR use the epoch after the monitor's eye-blink rejection, modelled
    // as taking away 85% of the blink and drift the engine added (a proxy: the real detector is proprietary)
@@ -373,8 +384,8 @@ function drawEeg(){if(view==='dsa'||mon.skin!=='classic')return;const {ctx,w,h}=
  for(let j=-1;j<=1;j++){const y=Math.round(h/2+j*h/4)+.5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();} // every scale/2 uV
  ctx.strokeStyle=SCR.mute;for(let k=1;k<secs;k++){const x=Math.round(w*k/secs)+.5;ctx.beginPath();ctx.moveTo(x,h-5);ctx.lineTo(x,h);ctx.stroke();}
  if(mon.teach){ctx.fillStyle='rgba(23,143,215,.16)';ctx.fillRect(w*(secs-2)/secs,0,w*2/secs,h);ctx.strokeStyle='rgba(120,190,255,.7)';ctx.strokeRect(w*(secs-2)/secs+.5,.5,w*2/secs-1,h-1);}
- const n=Math.min(SIG.length,N),o=SIG.length-n,x0=N-n;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.strokeStyle='#7ee0a1';ctx.lineWidth=1.3;ctx.beginPath();
- for(let i=0;i<n;i++){const x=(x0+i)/N*w,y=h/2-SIG[o+i]*sc;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.restore();
+ const n=Math.min(DSIG.length,N),o=DSIG.length-n,x0=N-n;ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();ctx.strokeStyle='#7ee0a1';ctx.lineWidth=1.3;ctx.beginPath();
+ for(let i=0;i<n;i++){const x=(x0+i)/N*w,y=h/2-DSIG[o+i]*sc;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.restore();
  if(mon.teach){ctx.font=MONO;const t='newest 2 s → next DSA column',tw=ctx.measureText(t).width;ctx.fillStyle='rgba(5,8,15,.8)';ctx.fillRect(w-tw-10,2,tw+8,16);
   ctx.fillStyle=SCR.mute;ctx.textAlign='right';ctx.fillText(t,w-6,14);}
  ctx.font='600 10px "JetBrains Mono", monospace';ctx.textAlign='center';ctx.fillStyle='rgba(5,8,15,.8)';ctx.fillRect(w/secs/2-12,h-15,24,13);ctx.fillStyle=SCR.mute;ctx.fillText('1 s',w/secs/2,h-5);
@@ -806,7 +817,10 @@ let lastUI=0;let last=performance.now(),dirty=true,colsSinceSnap=0;
 var onColumn=()=>{dirty=true;};
 function frame(now){requestAnimationFrame(frame);try{frameBody(now);}catch(e){const el=$('err');if(el&&el.hidden){el.hidden=false;el.textContent='Display error: '+e.message;}}}
 function frameBody(now){const dt=Math.min(0.1,(now-last)/1000);last=now;
- if(!paused){const target=simT+dt*speed;const need=Math.floor(target*FS)-Math.floor(simT*FS);simT=target;nmStep(dt*speed);if(typeof pumpStep==='function')pumpStep(dt*speed);step(need);stepR(need);runStory();}
+ if(!paused){const target=simT+dt*speed;const need=Math.floor(target*FS)-Math.floor(simT*FS);simT=target;nmStep(dt*speed);if(typeof pumpStep==='function')pumpStep(dt*speed);
+  mirror=speed===1;try{step(need);stepR(need);}finally{mirror=true;}
+  if(speed!==1){const dn=Math.floor((dispT+dt)*FS)-Math.floor(dispT*FS);dispGen(dn);swapCh();try{dispGen(dn);}finally{swapCh();}}
+  dispT+=dt;runStory();}
  if(typeof tlTick==='function')tlTick();
  if(mon.skin==='advance')advTick(dirty);
  if(mon.skin==='sedline')sedTick(dirty);
