@@ -53,9 +53,9 @@ const actions=panel.querySelector('.story');actions.setAttribute('role','group')
 depthGroup.append($('mixCtl'));panel.prepend(depthGroup,transport,actions);
 
 $('monitorChoice').addEventListener('change',e=>{applySkin(e.target.value,true);if(e.target.value==='advance'){advBootEnd();ADV.win=5;advRelayout();}syncDemoControls();});
-agent.addEventListener('change',e=>{stopStory();if(e.target.value==='mix'){showMode('mix');drug='mix';depth=mix;selectMix(selectedMix,selectedMixVariant);if(paused)pause.click();}else setDrug(e.target.value);syncDemoControls();});
+agent.addEventListener('change',e=>{stopStory();if(e.target.value==='tci'){pumpStart();}else if(e.target.value==='mix'){if(typeof pumpOff==='function')pumpOff();showMode('mix');drug='mix';depth=mix;selectMix(selectedMix,selectedMixVariant);if(paused)pause.click();}else setDrug(e.target.value);syncDemoControls();});
 $('playSpeed').addEventListener('input',e=>{setSpeed(+e.target.value);syncPlayback();});
-$('induceBtn').addEventListener('click',()=>{stopStory();if(mode==='mix'){selectMix(selectedMix,selectedMixVariant);}else{depth=.57;$('depth').value=57;}applyTarget();if(paused)pause.click();$('storyCap').textContent='Induction: watch the raw EEG and DSA evolve towards the selected target.';syncPlayback();});
+$('induceBtn').addEventListener('click',()=>{stopStory();if(typeof PUMP!=='undefined'&&PUMP.on){pumpSet({target:3.5});}else if(mode==='mix'){selectMix(selectedMix,selectedMixVariant);}else{depth=.57;$('depth').value=57;}applyTarget();if(paused)pause.click();$('storyCap').textContent='Induction: watch the raw EEG and DSA evolve towards the selected target.';syncPlayback();});
 channels.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ADV.ch=+b.dataset.ch;ADV.hemi='L';ADV.review=null;ADV.sensor=null;ADV.dlg=null;ADV.menu=false;ADV.pop=null;ADV.hc=null;ADV.chartKey=null;advRelayout();advOv();dirty=true;syncDemoControls();}));
 
 function syncPlayback(){
@@ -74,7 +74,7 @@ function syncDemoControls(){
  channels.hidden=mon.skin!=='advance';workspace.dataset.mode=mode;workspace.dataset.skin=mon.skin;
  if(workspace.dataset.view!==view){workspace.dataset.view=view;dirty=true;}
  if(lastFittedSkin!==mon.skin){lastFittedSkin=mon.skin;scheduleFit();}
- channels.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.ch===ADV.ch)));agent.value=mode==='mix'?'mix':drug;syncPlayback();if(typeof syncLearning==='function')syncLearning();
+ channels.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.ch===ADV.ch)));agent.value=typeof PUMP!=='undefined'&&PUMP.on?'tci':mode==='mix'?'mix':drug;syncPlayback();if(typeof syncLearning==='function')syncLearning();
 }
 setInterval(syncDemoControls,250);
 function presentationUI(on){
