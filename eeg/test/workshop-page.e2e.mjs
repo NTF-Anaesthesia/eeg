@@ -1,6 +1,7 @@
 // Workshop page (/workshop/, 25 Nov 2026): the BIS Advance screen only (no other monitors), BIS masked by default with Reveal,
 // the Advance's unilateral and bilateral sensor views, the NTFGH / NUHS header, a case with the quiz (neutral case names until the
-// reveal), the pump's ketamine line, the projector (1920×1080 full screen, no page scroll) and a phone width.
+// reveal), the pump's ketamine line, the projector (1920×1080 full screen, no page scroll), a phone width, and the home-screen
+// app (manifest, a service worker for /workshop/ only that keeps the page working offline).
 // Run with a static server in the repo root: PORT=8080 node eeg/test/workshop-page.e2e.mjs
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_PATH||'/opt/node22/lib/node_modules/playwright/index.mjs');
@@ -73,6 +74,25 @@ try{
  page=await browser.newPage({viewport:{width:1280,height:860}});await page.goto(URL0.replace('workshop/',''));await page.waitForFunction(()=>typeof TL!=='undefined'&&TL.t0!==null);
  assert.equal(await page.evaluate(()=>mon.skin),'advance');assert.ok(await page.locator('#monitorChoice').isVisible(),'main page keeps the skin picker');
  assert.equal(await page.locator('#wsBanner').count(),0);
+ await page.close();
+ // 7. home-screen app: the manifest has its own id and scope; the service worker controls /workshop/ only and keeps the page
+ //    working offline (venue Wi-Fi drops), including a case link
+ const ctx=await browser.newContext({viewport:{width:1180,height:820}});page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(URL0);await page.waitForFunction(()=>typeof TL!=='undefined'&&TL.t0!==null);
+ const man=await page.evaluate(async()=>(await fetch(document.querySelector('link[rel=manifest]').href)).json());
+ assert.deepEqual([man.id,man.start_url,man.scope,man.display,man.name],['/workshop/','./','./','standalone','EEG Workshop'],'workshop manifest');
+ const sw=await page.evaluate(async()=>{const r=await navigator.serviceWorker.ready;return r.scope;});
+ assert.ok(sw.endsWith('/eeg/workshop/'),'service worker scope is the workshop folder: '+sw);
+ await page.waitForFunction(async()=>{const c=await caches.open('workshop-1');return (await c.keys()).length>=30;},null,{timeout:20000});
+ await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+ const main=await ctx.newPage();await main.goto(URL0.replace('workshop/',''));await main.waitForFunction(()=>typeof TL!=='undefined'&&TL.t0!==null);
+ assert.equal(await main.evaluate(()=>!!navigator.serviceWorker.controller),false,'the main page is not controlled by the workshop service worker');
+ await main.close();
+ await ctx.setOffline(true);
+ for(const q of ['','?case=tci&blind=1']){await page.goto(URL0+q);await page.waitForFunction(()=>typeof TL!=='undefined'&&TL.t0!==null&&ADV.built&&COLS.length>10);
+  assert.ok(await page.locator('#advS').isVisible(),'offline: the workshop page runs '+q);}
+ assert.equal(await page.evaluate(()=>story?.case),'tci','offline: the case link still opens its case');
+ await ctx.close();
  assert.deepEqual(errors,[],'no page errors');
- console.log('PASS workshop page: BIS Advance only, masked BIS with Reveal, bilateral, header, case + quiz with neutral names, ketamine line, projector and phone');
+ console.log('PASS workshop page: BIS Advance only, masked BIS with Reveal, bilateral, header, case + quiz with neutral names, ketamine line, projector and phone; manifest, service worker (workshop only, offline)');
 }finally{await browser.close();}

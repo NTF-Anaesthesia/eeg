@@ -95,7 +95,7 @@ function fitMonitor(){
  const id={vista:'vistaWrap',advance:'advWrap',sedline:'sedWrap',philips:'pvWrap',classic:'classicWrap'}[mon.skin];
  // Fit the original device to the content box; presentation padding is outside it.
  const css=getComputedStyle(stage),pad=k=>parseFloat(css[k])||0;
- const desktop=matchMedia('(min-width:1101px)').matches,sim=stage.closest('.sim');
+ const sim=stage.closest('.sim'),desktop=matchMedia('(min-width:1101px)').matches||getComputedStyle(sim).getPropertyValue('--fit-desk').trim()==='1'; // --fit-desk: a page's side-by-side layout below 1101 px (the workshop page in landscape)
  // SedLine on desktop puts its children straight into #monitor's grid (demo.css), so measure #monitor's content box then
  const host=getComputedStyle(sim).display==='contents'?workspace:sim,hc=getComputedStyle(host);
  // Measure the available row, not the previous fitted column, so resizing can grow it again.

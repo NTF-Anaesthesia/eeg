@@ -130,3 +130,36 @@ reading the DSA and SEF95 with the number hidden. Files: `workshop.js`, `pump.js
 - Links: `https://eeg.anantf.com/workshop/?case=propket&bi=1`, `?case=propdex&quiz=1`, `?case=tci&quiz=1`.
 - Test: `test/workshop-page.e2e.mjs` (Advance only, no other monitor names in the page, masked BIS and Reveal, bilateral,
   header size, case and quiz with neutral names, ketamine bolus raises Ce, projector without page scroll, phone).
+
+## Workshop page on iPads (25 Nov 2026)
+
+The colleague runs the session with participants on iPads ("Also can remove the educational material at bottom - I will try
+to run it with iPads for the participants").
+
+- Only the simulator: header strip, case bar and Quiz, the BIS Advance and the pump. The teaching panels, the pump note and
+  the long footer are gone; the footer is one line ("Not for clinical use or dosing"). Quiz answer notes stay.
+- Landscape (any width from 640 px, so iPad and phone): the controls sit in a side column beside the monitor (colleague:
+  "When I use landscape - can the toggle buttons be on the side instead of at the bottom?"); the monitor takes the rest of
+  the row. `ws-page.css` sets `--fit-desk:1` so `demo.js` fits the monitor beside `--fit-side` below 1101 px too. Touch
+  screens get a narrower column (330 px; 290 px on a phone) and a smaller header. Portrait: stacked, the monitor full width.
+- Touch: every control outside the device screen is at least 44 px; inputs use 16 px text (no iOS zoom); `touch-action:
+  manipulation` stops double-tap zoom; controls are not text-selectable; the sliders are 44 px high. The full-screen key
+  falls back to the page's own focus mode where the browser has no real full screen (iPhone Safari).
+- Alpha dropout key (colleague: "Actually burst suppression no need cos I can just increase depth and it will happen. But
+  can have the alpha dropout."): runs the main page's alpha stimulus; off while a quiz checkpoint is open or a stimulus runs.
+- Home-screen app "EEG Workshop": `workshop/manifest.webmanifest` (`id` "/workshop/", `start_url` and `scope` `./`, so it
+  works at /workshop/ and /eeg/workshop/; standalone, any orientation, NUHS navy), its own icons (`workshop/icons/`, a white
+  EEG trace and "W" on navy with the NUHS stripe), iOS meta (title, apple-touch-icon). The browser's install prompt is
+  cancelled (AGENTS.md); on an iPad: Safari, Share, Add to Home Screen. It does not overlap a main-page install (see NOTES).
+- Offline: `workshop/sw.js`, scoped to `workshop/` only, precaches the page, scripts, styles, fonts and icons
+  (`VERSION` 'workshop-1') and fetches network first (4 s timeout), falling back to the cache, so it keeps working on weak
+  venue Wi-Fi after one online visit. A deploy is picked up on the next online load; bump `VERSION` only to drop old caches.
+- `tools/gen-workshop.py` regenerates `workshop/index.html` from the main page and rewrites the worker's shell list
+  (between `// shell:start` and `// shell:end`). Run it after changing the main page's monitor section or file names.
+- Tests: `test/workshop-ipad.e2e.mjs` (WebKit with touch at 820x1180, 1180x820, 1024x1366, 1366x1024 and 844x390: no
+  sideways scroll, side column or stacked, 44 px targets, taps on the channels, Reveal, the Advance menu, Cp/Ce, Alpha
+  dropout, Give ketamine, Quiz; a slider drag; focus mode; the manifest). It needs Playwright's WebKit, which does not run
+  natively on Ubuntu 26.04 (libicu76): use the `mcr.microsoft.com/playwright:v1.56.1-noble` image locally; CI installs it.
+  The slider drag is a mouse drag: Playwright cannot replay a real iOS finger drag on a range input.
+  `test/workshop-page.e2e.mjs` checks the manifest, that the worker controls `/workshop/` but not the main page, and that
+  the page and a `?case=` link load offline.

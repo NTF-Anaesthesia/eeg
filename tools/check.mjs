@@ -15,11 +15,14 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
 const fail = msg => errors.push(msg);
 
-const apps = fs.readdirSync(ROOT).filter(d => fs.existsSync(path.join(ROOT, d, 'sw.js')));
+// an app is a folder with a sw.js, at the top or one level down (eeg/workshop/, the workshop page's own home-screen app)
+const top = fs.readdirSync(ROOT, { withFileTypes: true }).filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules').map(d => d.name);
+const apps = [...top, ...top.flatMap(d => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).filter(e => e.isDirectory()).map(e => `${d}/${e.name}`))]
+  .filter(d => fs.existsSync(path.join(ROOT, d, 'sw.js')));
 for (const app of apps) {
   const swPath = `${app}/sw.js`;
   const sw = fs.readFileSync(path.join(ROOT, swPath), 'utf8');
-  const prefix = `${app}-`;
+  const prefix = `${path.posix.basename(app)}-`;
 
   const version = sw.match(/const VERSION = '([^']+)'/)?.[1];
   if (!version) fail(`${swPath}: no VERSION constant`);
@@ -34,7 +37,7 @@ for (const app of apps) {
   const shellSrc = sw.match(/const SHELL = \[([\s\S]*?)\];/)?.[1];
   if (!shellSrc) { fail(`${swPath}: no SHELL list`); continue; }
   const shell = [...shellSrc.matchAll(/'([^']+)'/g)].map(m => m[1]).filter(f => f !== './')
-    .map(f => path.posix.normalize(`${app}/${f}`));
+    .map(f => path.posix.normalize(`${app}/${f.replace(/[?#].*$/, '')}`));
   for (const f of shell) if (!fs.existsSync(path.join(ROOT, f))) fail(`${swPath}: SHELL lists ${f}, which doesn't exist`);
 }
 

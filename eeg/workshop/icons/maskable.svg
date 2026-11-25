@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- maskable variant: full-bleed navy, the same marks inside the 80% safe zone -->
+  <rect width="512" height="512" fill="#002f6c"/>
+  <g transform="translate(51.2 51.2) scale(0.8)">
+  <path transform="translate(17 -44)" d="M84 222h34l18-42 22 88 22-116 26 144 22-102 22 56 22-42 22 24h46" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M150 312l30 108 36-84 36 84 30-108" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(40 0)"/>
+  <g transform="translate(96 446)"><rect width="80" height="14" fill="#e57200"/><rect x="80" width="80" height="14" fill="#e4002b"/><rect x="160" width="80" height="14" fill="#178fd7"/><rect x="240" width="80" height="14" fill="#ffffff"/></g>
+  </g>
+</svg>

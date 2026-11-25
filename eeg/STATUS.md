@@ -22,6 +22,9 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Workshop page for iPads (25 Nov 2026; `docs/workshop.md`): controls in a side column in landscape (iPad and phone),
+  stacked in portrait, 44 px touch targets, an Alpha dropout key (off during quiz checkpoints), teaching text removed, and
+  its own home-screen app "EEG Workshop" that works offline; WebKit iPad test in CI.
 - Playback speed scales every induction (25 Nov 2026; `docs/engine-and-wording.md`, `docs/workshop.md`): the owner's "9x
   doesn't speed up the induction". Induce without the pump was only about 3.4x faster at 9x (a 30 Oct 2026 rule slowed the
   engine's rise above 1x); now all lags are in sim time. The pump already scaled; its slow onset is Eleveld's ke0, as in the
