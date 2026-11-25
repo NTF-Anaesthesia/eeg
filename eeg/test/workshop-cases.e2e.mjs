@@ -35,6 +35,13 @@ try{
  assert.ok(Math.abs(k0.pump.propofol-k1.pump.propofol)<0.3&&k1.pump.propofol<=k0.pump.propofol,'propofol Ce unchanged or lower');assert.ok(k1.pump.ketamine>0);
  assert.ok(k1.bis>k0.bis+10&&k1.sef>k0.sef+6,`ketamine: BIS ${k0.bis.toFixed(0)} -> ${k1.bis.toFixed(0)}, SEF95 ${k0.sef.toFixed(1)} -> ${k1.sef.toFixed(1)}`);
  assert.ok(k1.alpha<k0.alpha-1,'ketamine: alpha weakens');
+ // propofol + dexmedetomidine: the dex line's Ce builds over the load; slow activity up, alpha weaker, faster activity down
+ await page.goto(BASE+'?case=propdex');await ready();
+  const ex=t=>page.evaluate(t=>{tlRun(Math.max(0,story.t0+t-simT));const c=HIST.slice(-10),b=(lo,hi)=>c.reduce((a,x)=>{let s=0;for(let k=lo;k<hi;k++)s+=x.db[k];return a+s/(hi-lo);},0)/c.length;
+  return {slow:b(1,4),alpha:b(16,26),beta:b(30,50),dex:kdxCe(PUMP.x),prop:pumpCe(),panel:!$('pumpCtl').hidden};},t);
+ const d0=await ex(410),d1=await ex(1000);
+ assert.ok(d0.dex===0&&d1.dex>0.6,'dex Ce on the pump: '+d1.dex.toFixed(2));assert.ok(Math.abs(d1.prop-3.5)<0.1,'propofol TCI live alongside');assert.ok(d1.panel,'pump panel shown in the case');
+ assert.ok(d1.slow>d0.slow&&d1.alpha<d0.alpha,`dex: slow ${d0.slow.toFixed(1)} -> ${d1.slow.toFixed(1)} dB, alpha ${d0.alpha.toFixed(1)} -> ${d1.alpha.toFixed(1)} dB`);
  // blinded: the caption is the neutral event line (no interpretation, no drug name for the adjunct)
  await page.goto(BASE+'?case=propket&blind=1');await ready();await at(500);
  assert.match(await page.textContent('#storyCap'),/^5\/8 · Analgesic adjunct given\.$/,'neutral event line while blinded');

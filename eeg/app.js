@@ -298,6 +298,9 @@ const snapAll=()=>{eng.snap();R.eng.snap();};
 // line, index alarms and the page's own BIS hints; the DSA, SEF95/MF and the raw EEG stay. Reveal shows it again until masked.
 // Set by the Blind key or ?blind=1 (workshop.js). The skins call masked() when they draw, never at load.
 const blind={on:false,reveal:false},MASK='••';
+// the unbranded workshop page (workshop/index.html sets WS_PAGE before the scripts): its own generic monitor (ws-monitor.js) and
+// neutral wording, 'index' for the processed EEG number
+const WS_PAGE=!!window.WS_PAGE,IDX=WS_PAGE?'index':'BIS';
 const masked=()=>blind.on&&!blind.reveal,bisV=v=>masked()?null:v;
 const mon={smooth:15,scale:50,sweep:8,dbLo:DB_LO,dbHi:DB_HI,teach:true,info:'',infoUntil:0,skin:'vista',trend:5,bottom:'bis',alo:40,ahi:60};
 function applyTarget(){eng.setTarget(drug,depth,mods);R.eng.setTarget(drug,depth,modsR);describe();if(typeof onTarget==='function')onTarget();}
@@ -628,7 +631,7 @@ function scaleUI(){$('kScale').textContent=`EEG ±${mon.scale} µV`;}
 function trendUI(){$('kTrend').textContent=`Trend ${mon.trend} min`;$('kBottom').textContent='Bottom: '+(mon.bottom==='emg'?'BIS + EMG':mon.bottom==='sr'?'BIS + SR':'BIS trend');
  txt('dsaRange',(mon.dbLo===DB_LO&&mon.dbHi===DB_HI?'':`${mon.dbLo}…${mon.dbHi} dB · `)+`last ${mon.trend} min`);}
 let menuOpen=false; // the on-screen Menu (VISTA and two-sided screens)
-function applySkin(s,reset,init){mon.skin=s;if($('monitorChoice'))$('monitorChoice').value=s;mtApply();$('vistaWrap').hidden=s!=='vista';$('sedWrap').hidden=s!=='sedline';if(s==='sedline')sedApply();$('advWrap').hidden=s!=='advance';if(s==='advance')advApply();$('pvWrap').hidden=s!=='philips';if(s==='philips')pvApply();$('classicWrap').hidden=s!=='classic';$('teachStrip').hidden=s==='classic';$('bilSum').hidden=s!=='sedline'&&s!=='advance'&&s!=='philips';
+function applySkin(s,reset,init){mon.skin=s;if($('monitorChoice'))$('monitorChoice').value=s;mtApply();if($('vistaWrap'))$('vistaWrap').hidden=s!=='vista';$('sedWrap').hidden=s!=='sedline';if(s==='sedline')sedApply();$('advWrap').hidden=s!=='advance';if(s==='advance')advApply();$('pvWrap').hidden=s!=='philips';if(s==='philips')pvApply();$('classicWrap').hidden=s!=='classic';$('teachStrip').hidden=s==='classic';$('bilSum').hidden=s!=='sedline'&&s!=='advance'&&s!=='philips';
  document.querySelectorAll('#skinSeg button,#monSwitch button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.skin===s));
  $('keySeg').hidden=s!=='classic';if(s==='classic')closeMenu(true);
  if(reset){mon.scale=s==='classic'?100:50;mon.sweep=s==='classic'?'auto':8;}
@@ -666,7 +669,8 @@ function setTeach(on){mon.teach=on;$('mTeach').checked=on;$('vZone').hidden=!on;
 $('mTeach').onchange=e=>setTeach(e.target.checked);
 try{if(localStorage.getItem('bisdsa.teach')==='0')setTeach(false);}catch(e){}
 // Each teaching session opens on BIS Advance with a unilateral sensor.
-applySkin('advance',true,true);advBootEnd();ADV.win=5;advRelayout();
+if(WS_PAGE)applySkin('ws',true,true); // the workshop page's own monitor (ws-monitor.js); no device screen
+else{applySkin('advance',true,true);advBootEnd();ADV.win=5;advRelayout();}
 try{const d=JSON.parse(localStorage.getItem('bisdsa.disp')||'null');if(d&&['auto',4,8,16].includes(d.sweep)){mon.sweep=d.sweep;dispUI(false);}}catch(e){}
 $('pause').onclick=()=>{paused=!paused;$('pause').setAttribute('aria-pressed',paused);$('pause').textContent=paused?'Resume':'Pause';};
 
@@ -825,6 +829,7 @@ function frameBody(now){const dt=Math.min(0.1,(now-last)/1000);last=now;
  if(mon.skin==='advance')advTick(dirty);
  if(mon.skin==='sedline')sedTick(dirty);
  if(mon.skin==='philips')pvTick(dirty);
+ if(mon.skin==='ws'&&typeof wsTick==='function')wsTick(dirty);
  if(dirty){paintOff();drawTrend();drawDsa();if(mon.skin==='vista'){paintV();drawVDsa();}readouts();stimUI();dirty=false;}
  drawEeg();if(mon.skin==='vista')drawVEeg();
  if(exPlaying){exT+=dt;if(exT>=T[6]){exT=0;snapshotEx();}}

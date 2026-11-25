@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f7f5ef">
+<meta name="color-scheme" content="light">
+<title>EEG workshop · processed EEG simulator</title>
+<meta name="description" content="Workshop simulator: blinded reading of the density spectral array (DSA), SEF95 and the raw EEG, with scripted cases, a quiz and a TCI pump. Synthetic EEG only.">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<!-- The unbranded workshop page (25 Nov 2026): the same engine, pump, cases and quiz scripts as the main page (../index.html),
+     one generic monitor (ws-monitor.js) and no device names, logos or skin picker. The monitor section below follows the main
+     page's markup so the shared scripts find their elements; the main page's device screens are left out. -->
+<link rel="stylesheet" href="../page.css">
+<link rel="stylesheet" href="../demo.css?v=20261017-fit">
+<link rel="stylesheet" href="../workshop.css">
+<link rel="stylesheet" href="../ws-page.css">
+<script>window.WS_PAGE=1</script>
+</head>
+<body class="ws-page">
+<div class="wrap">
+<section id="monitor" aria-labelledby="h-mon">
+  <div class="monhead"><h1 class="apptitle" id="h-mon">EEG workshop <span>· processed EEG simulator</span></h1>
+  <div class="demo-toolbar"><label for="monitorChoice">Monitor</label><select id="monitorChoice" hidden><option value="ws">Workshop monitor</option></select><button type="button" id="fullScreen" aria-pressed="false">Full screen</button></div></div>
+  <div class="sim">
+    <div class="screens">
+    <div class="wsmon" id="wsMon" role="group" aria-label="Workshop EEG monitor"></div>
+    <div class="advwrap" id="advWrap" hidden></div>
+    <div class="sedwrap" id="sedWrap" hidden></div>
+    <div class="pvwrap" id="pvWrap" hidden></div>
+    <div class="vmenu" id="vMenu" role="dialog" aria-label="Monitor menu" hidden><div class="vmenuh"><b>Menu</b><button type="button" id="vMenuClose">Close</button></div><ul id="vMenuList"></ul></div>
+    <div class="screen mon" id="classicWrap" hidden><div class="glass">
+      <div class="statusbar"><span><b>index</b> · Case AH5F</span><div id="vMsg" class="msg" role="status" aria-live="polite"></div><span id="vClock">--:--</span></div>
+      <div class="readouts">
+        <div class="bisbox"><span class="k">index</span><span class="v" id="vBis">--</span><span class="zone" id="vZone">--</span></div>
+        <div class="bars">
+          <div class="bar"><span class="k">SQI</span><span class="v" id="vSqi">--</span><div class="segs" id="sqiSegs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><span class="u">signal quality %</span></div>
+          <div class="bar"><span class="k">EMG</span><span class="v" id="vEmg">--</span><div class="segs" id="emgSegs" aria-hidden="true"><i></i><i></i><i></i><i></i></div><span class="u">dB</span></div>
+        </div>
+        <div class="params">
+          <div class="ro"><span class="k">SR</span><span class="v" id="vSr">0</span><span class="u">% flat</span></div>
+          <div class="ro"><span class="k">SEF</span><span class="v" id="vSef">--</span><span class="u">Hz</span></div>
+          <div class="ro"><span class="k">TP</span><span class="v" id="vTp">--</span><span class="u">dB power</span></div>
+          <div class="ro"><span class="k">BC</span><span class="v" id="vBc">0</span><span class="u">bursts/min</span></div>
+        </div>
+        <div class="timers" aria-label="Cumulative times this case">
+          <div class="ro"><span class="k">Suppression</span><span class="v" id="vSupT">0:00</span></div>
+          <div class="ro"><span class="k">index &lt; 40</span><span class="v" id="vLowT">0:00</span></div>
+          <button type="button" class="tclr" id="tReset" aria-label="Reset the suppression and index under 40 timers">Reset</button>
+        </div>
+      </div>
+      <div class="lane" id="wTrend"><div class="lbl"><span>index <i class="key bis"></i> · EMG <i class="key emg"></i></span><span id="tgtCap" style="text-transform:none">target 40–60 set by user</span></div>
+      <canvas id="cTrend" height="88" aria-label="index and EMG trends over the last five minutes"></canvas></div>
+      <div class="lane" id="wDsa"><div class="lbl"><span>DSA · 0–30 Hz</span><span id="dsaRange" style="text-transform:none">last 5 min</span></div>
+      <canvas id="cDsa" height="190" aria-label="Density spectral array over the last five minutes"></canvas></div>
+      <div class="lane" id="wEeg"><div class="lbl"><span id="eegLbl">EEG · 8 s</span><span id="eegDiv" style="text-transform:none">50 µV/div</span></div>
+      <canvas id="cEeg" height="110" aria-label="Scrolling raw EEG trace"></canvas></div>
+      <div class="softkeys" id="viewSeg" role="group" aria-label="Screen view">
+        <button data-view="both" aria-pressed="true">DSA + EEG</button><button data-view="dsa" aria-pressed="false">DSA + index</button><button data-view="eeg" aria-pressed="false">EEG</button>
+      </div>
+    </div></div>
+      <div class="softkeys keyrow" id="keySeg" hidden role="group" aria-label="Monitor settings">
+        <button id="kSmooth">Smoothing 15 s</button><button id="kScale">EEG ±100 µV</button><button id="kSweep">EEG sweep auto</button><button id="kTrend">Trend 5 min</button><button id="kBottom">Bottom: index trend</button>
+      </div>
+    <div class="tline" id="tLine"><div class="tbar"><canvas id="tCv" aria-hidden="true"></canvas><span id="tNow">0:00</span><output id="timePreview" aria-hidden="true"></output></div>
+   <input id="timeScrub" type="range" min="0" max="600" value="0" step="1" aria-label="Simulation time"></div>
+    <div class="teachstrip" id="teachStrip" aria-label="Readouts the real monitor does not show as numbers">
+      <span class="ts" id="bilSum" hidden></span><span class="ts"><b>SQI</b> <span id="s2Sqi">--</span>%</span><span class="ts"><b>EMG</b> <span id="s2Emg">--</span> dB</span><span class="ts"><b>SR</b> <span id="s2Sr">0</span>%</span><span class="ts"><b>SEF</b> <span id="s2Sef">--</span> Hz</span><span class="ts"><b>TP</b> <span id="s2Tp">--</span></span><span class="ts"><b>BC</b> <span id="s2Bc">0</span>/min</span><span class="ts zone" id="s2Zone">--</span><span class="ts"><b>Suppression</b> <span id="s2Sup">0:00</span></span><span class="ts"><b>index&lt;40</b> <span id="s2Low">0:00</span></span><button type="button" class="tclr" id="tReset2" aria-label="Reset the suppression and index under 40 timers">Reset</button>
+    </div>
+    </div>
+    <div class="panel">
+      <div class="ctl"><label for="agentChoice" class="t">Anaesthetic</label><select id="agentChoice"><option value="propofol">Propofol</option><option value="sevo">Sevoflurane</option><option value="ketamine">Ketamine</option><option value="dex">Dexmedetomidine</option><option value="mix">Drug combination</option></select></div>
+      <div class="ctl" id="mixCtl" hidden>
+        <p class="tgt" id="tgtMix"><b>Model index --</b> <span id="tgtMixSub"></span></p>
+        <div class="seg" id="presetSeg" role="group" aria-label="Combinations">
+          <button data-preset="tiva" aria-pressed="false">Propofol + remifentanil</button><button data-preset="propket" aria-pressed="false">Propofol + ketamine</button><button data-preset="sevon2o" aria-pressed="false">Sevoflurane + N₂O</button><button data-preset="propdex" aria-pressed="false">Propofol + dexmedetomidine</button>
+        </div>
+      </div>
+      <div class="ctl" id="depthCtl"><label class="t" for="depth">Depth target</label>
+        <div class="track"><i class="zoneband" id="zoneBand" hidden></i><input type="range" id="depth" min="0" max="100" value="0" aria-describedby="tgtBis"><i class="effmark" id="effMark" aria-hidden="true"></i><output class="pop" id="tgtPop" aria-hidden="true" hidden></output></div>
+        <div class="ticks" id="ticks"><span>Awake</span><span>Sedated</span><span>GA</span><span>Deep</span><span>Flat</span></div>
+        <p class="tgt" id="tgtBis"><b>Model index --</b> <span id="tgtSub"></span></p>
+        <p class="tgtnote" id="zoneNote" hidden><i class="swatch"></i> <span id="zoneText"></span></p></div>
+
+      <details class="ctl" id="teachingOptions"><summary>Adjust current EEG</summary>
+        <label class="chk"><input type="checkbox" id="mElder"> Older patient (over 70)</label>
+        <label class="chk"><input type="checkbox" id="mEmg"> Facial muscle activity (EMG)</label>
+        <div class="nmbrow"><span id="asymLbl">One-sided EEG slowing</span>
+          <div class="seg" id="asymSeg" role="group" aria-labelledby="asymLbl"><button data-asym="" aria-pressed="true">None</button><button data-asym="L" aria-pressed="false">Left</button><button data-asym="R" aria-pressed="false">Right</button></div></div>
+        <label class="chk"><input type="checkbox" id="mDia"> Diathermy (electrical interference)</label>
+        <div class="row"><button class="btn" id="stimBtn" aria-pressed="false">Surgical stimulus</button></div></details>
+      <details class="ctl" id="displayOptions"><summary>Display options</summary>
+
+        <label class="chk"><input type="checkbox" id="mTeach" checked> Teaching labels (zone, newest epoch, colour key, target band)</label>
+        <div class="rngbox"><span class="rngt">DSA colour range (power → blue … red)</span>
+          <label class="rng" for="dbLo"><span>Floor (blue)</span><output id="oLo" for="dbLo">-3 dB</output></label><input type="range" id="dbLo" min="-30" max="20" step="1" value="-3">
+          <label class="rng" for="dbHi"><span>Ceiling (red)</span><output id="oHi" for="dbHi">31 dB</output></label><input type="range" id="dbHi" min="0" max="50" step="1" value="31">
+          <p class="tgtnote">Raise the floor and the DSA turns bluer, lower the ceiling and it turns redder. Teaching strips keep the default scale.</p>
+          <div class="row"><button class="btn" id="dbReset">Default range</button></div></div>
+</details>
+      <div class="ctl playback"><label class="t" for="playSpeed">Playback <output id="speedValue">1×</output></label>
+        <div class="playback-row"><input id="playSpeed" type="range" min="1" max="10" step="1" value="1"><button id="pause" aria-pressed="false">Pause</button></div></div>
+
+      <div class="reading" aria-live="polite"><b id="rName">Awake</b><p id="rText"></p></div>
+      <p class="err" id="err" hidden></p>
+      <div class="story">
+        <div class="row"><button class="btn" id="induceBtn">Induce</button><button class="btn" id="wakeBtn">Emerge</button><button class="btn primary" id="storyBtn">Play induction → emergence</button></div>
+        <p class="caption" id="storyCap" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- elements the shared scripts expect from the main page's teaching sections; empty and hidden here -->
+<div id="wsStubs" hidden><canvas id="cEx"></canvas><ol id="steps"></ol><p id="exCap"></p><button id="exPlay" type="button"></button><button id="exNext" type="button"></button>
+<div id="lib"></div><canvas id="cQuiz"></canvas><span id="score"></span><div id="opts"></div><p id="fb"></p><button id="qNext" type="button"></button></div>
+<footer class="ws-foot">A teaching simulation for a workshop. The EEG is synthetic and the index comes from a simple model of spectral features, not any monitor's algorithm. Not for clinical use.</footer>
+</div>
+<script src="../mt-screen.js"></script>
+<script src="../adv-screen.js"></script>
+<script src="../adv-draw.js"></script>
+<script src="../adv-live.js"></script>
+<script src="../adv-menu.js"></script>
+<script src="../adv-seed.js"></script>
+<script src="../sed-screen.js"></script>
+<script src="../sed-draw.js"></script>
+<script src="../sed-menu.js"></script>
+<script src="../pv-screen.js"></script>
+<script src="../app.js"></script>
+<script src="../teaching.js"></script>
+<script src="../timeline.js"></script>
+<script src="../demo.js?v=20261017-fit"></script>
+<script src="../pump.js"></script>
+<script src="../cases.js"></script>
+<script src="../workshop.js"></script>
+<script src="../quiz.js"></script>
+<script src="../ws-monitor.js"></script>
+</body>
+</html>

@@ -6,7 +6,7 @@
 // not tests, and the simulator's patterns are a teaching approximation (docs/engine-and-wording.md).
 const QZ_OPTS={
  phase:['Awake or lightly sedated','General anaesthesia','Too deep: burst suppression','Lightening or emerging'],
- agent:['Propofol','Sevoflurane','Propofol with ketamine'],
+ agent:['Propofol','Sevoflurane','Propofol with ketamine','Propofol with dexmedetomidine'],
  arousal:['No','Yes']};
 const QZ_ASK={phase:'Depth or phase?',agent:'Most likely agent?',arousal:'Arousal response to stimulation?'};
 const QN={ // shared teaching notes
@@ -14,19 +14,21 @@ const QN={ // shared teaching notes
  sevo:'Alpha and slow-delta with theta (around 5 Hz) filling the gap between them, a sevoflurane feature from about 1 MAC; the bands look broader and merge more than with propofol. Telling the agents apart from the DSA alone is uncertain.',
  arousal:'After the incision the alpha band dipped, then faster activity (around 18 Hz) appeared and SEF95 rose at an unchanged hypnotic level. That sequence is consistent with an arousal response to noxious stimulation, but it is not specific: check the clinical signs, drug delivery and signal quality before treating. An opioid blunts the response.',
  emerge:'The anaesthetic has stopped: alpha weakens and slows, slow-delta fades, faster activity returns and SEF95 climbs over minutes as the effect wears off. The change is gradual and follows the drug, unlike the quicker change after the incision. The index lags the EEG.',
+ dex:'Slow activity and spindle-like bursts grew and the alpha band became weaker and slower at a steady propofol target, with less fast activity: consistent with dexmedetomidine added to propofol. The index may fall a little; the pattern is a teaching approximation and real patients vary.',
  ket:'BIS and SEF95 rose although the propofol target did not change and nothing was stopped: ketamine adds fast beta-gamma activity and weakens alpha. A high index here need not mean light anaesthesia or emergence. Compare with emergence: there the slow-delta fades too; here it stays.'};
 // checkpoints: at (sim s after the case start), the correct answer(s) by question, and the note
 const QUIZ={
  tci:[{at:345,a:{phase:1,agent:0,arousal:0},note:QN.prop},{at:690,a:{phase:1,agent:0,arousal:1},note:QN.arousal},{at:1500,a:{phase:3,agent:0,arousal:0},note:QN.emerge}],
  sevo:[{at:345,a:{phase:1,agent:1,arousal:0},note:QN.sevo},{at:640,a:{phase:1,agent:1,arousal:1},note:QN.arousal},{at:1290,a:{phase:3,agent:1,arousal:0},note:QN.emerge+' Volatile washout is quick in this case.'}],
+ propdex:[{at:345,a:{phase:1,agent:0,arousal:0},note:QN.prop},{at:1000,a:{phase:1,agent:3,arousal:0},note:QN.dex},{at:1650,a:{phase:3,agent:[0,3],arousal:0},note:QN.emerge+' Dexmedetomidine leaves slowly, so the slow activity can linger.'}],
  propket:[{at:345,a:{phase:1,agent:0,arousal:0},note:QN.prop},{at:700,a:{phase:1,agent:2,arousal:0},note:QN.ket},{at:1650,a:{phase:3,agent:[0,2],arousal:0},note:QN.emerge+' The ketamine was stopped earlier, so the agent now is mainly propofol.'}]};
 const qz={on:false,case:null,done:new Set(),i:-1,score:0,max:0,log:[],open:false};
 // ----- the strip: Quiz key and the optional workshop banners -----
 const quizBtn=document.createElement('button');quizBtn.type='button';quizBtn.id='quizBtn';quizBtn.className='ws-quiz';quizBtn.textContent='Quiz';
 quizBtn.setAttribute('aria-pressed','false');quizBtn.title='Quiz: blinded case with questions at checkpoints';wsStrip.append(quizBtn);
-if(wsParams.get('workshop')==='1'){const b=document.createElement('div');b.className='ws-banner';b.id='wsBanner';
+if(WS_PAGE||wsParams.get('workshop')==='1'){const b=document.createElement('div');b.className='ws-banner';b.id='wsBanner';
  b.innerHTML='<span class="ws-org"><abbr title="Ng Teng Fong General Hospital">NTFGH</abbr></span><span class="ws-org"><abbr title="National University Health System">NUHS</abbr></span>'+
-  '<span class="ws-title"><b>EEG workshop</b> Blinded BIS DSA &amp; SEF95 interpretation · case simulator</span>';
+  `<span class="ws-title"><b>EEG workshop</b> Blinded ${WS_PAGE?'processed EEG':'BIS'} DSA &amp; SEF95 interpretation · case simulator</span>`;
  wsStrip.prepend(b);workspace.dataset.workshop='on';}
 // ----- the card -----
 const qCard=document.createElement('section');qCard.id='quizCard';qCard.className='quiz-card';qCard.hidden=true;
@@ -36,7 +38,7 @@ const qEsc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 function qzUI(){quizBtn.setAttribute('aria-pressed',String(qz.on));workspace.dataset.quiz=qz.on&&qz.case?'on':'off';
  try{const u=new URL(location.href);if(qz.on)u.searchParams.set('quiz','1');else u.searchParams.delete('quiz');history.replaceState(null,'',u);}catch(e){}}
 function qzReset(id){qz.case=id;qz.done=new Set();qz.i=-1;qz.score=0;qz.max=0;qz.log=[];qzClose();}
-function qzClose(){qz.open=false;qCard.hidden=true;qCard.innerHTML='';}
+function qzClose(){qz.open=false;qCard.hidden=true;qCard.innerHTML='';if(workspace.dataset.quiz==='reveal')workspace.dataset.quiz='on';}
 const qzOk=(c,v)=>Array.isArray(c)?c.includes(v):c===v;
 function qzAsk(i){const cp=QUIZ[qz.case][i];qz.i=i;qz.open=true;if(!paused)$('pause').click();
  const n=QUIZ[qz.case].length;
@@ -49,11 +51,12 @@ function qzAsk(i){const cp=QUIZ[qz.case][i];qz.i=i;qz.open=true;if(!paused)$('pa
 function qzMark(cp,f){const res=[];let got=0;
  for(const [q,c] of Object.entries(cp.a)){const el=f.querySelector(`input[name=q_${q}]:checked`),v=el?+el.value:null,ok=v!=null&&qzOk(c,v);if(ok)got++;
   res.push({q,ok,your:v==null?'No answer':QZ_OPTS[q][v],right:(Array.isArray(c)?c:[c]).map(j=>QZ_OPTS[q][j]).join(' or ')});}
+ workspace.dataset.quiz='reveal'; // the answer shows the drug details (pump panel) until the case continues
  qz.score+=got;qz.max+=res.length;qz.log.push({i:qz.i,got,of:res.length});
  const col=COLS[COLS.length-1]||{},bis=col.bis==null?'--':Math.round(col.bis),sef=col.sef==null?'--':Math.round(col.sef);
  qCard.innerHTML=`<h2 id="quizTitle">Checkpoint ${qz.i+1}: ${got} of ${res.length}</h2><ul class="quiz-res">`+
   res.map(r=>`<li class="${r.ok?'ok':'no'}"><b>${QZ_ASK[r.q]}</b> ${r.ok?'Correct':'Not quite'}: ${qEsc(r.right)}${r.ok?'':` <span>(you: ${qEsc(r.your)})</span>`}</li>`).join('')+
-  `</ul><p class="quiz-bis">Hidden BIS <b id="quizBis">${bis}</b> · SEF95 ${sef} Hz</p><p class="quiz-note">${qEsc(cp.note)}</p>`+
+  `</ul><p class="quiz-bis">Hidden ${IDX} <b id="quizBis">${bis}</b> · SEF95 ${sef} Hz</p><p class="quiz-note">${qEsc(cp.note)}</p>`+
   `<div class="quiz-actions"><button type="button" id="quizNext">Continue the case</button></div>`;
  $('quizNext').onclick=()=>{qzClose();if(paused)$('pause').click();};$('quizNext').focus({preventScroll:true});}
 function qzSummary(){const n=QUIZ[qz.case]?.length||0,label=CASES[qz.case]?.label||'';qz.open=true;

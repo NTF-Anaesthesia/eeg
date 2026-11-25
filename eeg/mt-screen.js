@@ -80,7 +80,8 @@ function mtMsgUI(){const el=mq('v2Msg'),m=mtMessage();if(!m){el.hidden=true;retu
  el.hidden=false;el.className='vmsg '+m.pri;el.dataset.key=m.key||'';MT.curLo=m.lo||'';
  if(t.textContent!==text||was!==!!m.dis){t.textContent=text;let fs=m.pri==='info'?18:22;t.style.fontSize=`calc(${fs}*var(--u))`;while(fs>15&&t.scrollWidth>t.clientWidth+1){fs-=.5;t.style.fontSize=`calc(${fs}*var(--u))`;}}}
 // ---------- readouts: called once a second (and on every change) with the newest column ----------
-function mtReadouts(c,bl,sr,e){
+function mtReadouts(c,bl,sr,e){if(!mq("vista"))return; // no such screen on the workshop page
+
  const sensorOn=!!MT.sensor,v=mq('v2Bis');
  v.textContent=sensorOn||bl||c.bis==null?'':masked()?MASK:String(Math.round(c.bis));v.classList.toggle('hollow',!sensorOn&&!bl&&c.sqi<50);
  mtSqiBars();
@@ -485,7 +486,7 @@ function mtReviewUI(){const R_=MT.review;if(!R_)return;const P=mq('v2Rev');MT_P=
 function mtReviewClick(e){const R_=MT.review;if(!R_||!mtH().length)return;const c=mq('c2Dsa'),r=c.getBoundingClientRect(),vx=88+(e.clientX-r.left)/r.width*552,win=mtReviewLen(),m=mtModel(win,Math.min(R_.off||0,Math.max(0,mtH().length-win))),i=Math.floor((vx-122)/478*win);
  if(i<0||i>=m.n)return;R_.cur=i;if(R_.mode!=='cursor'){R_.mode='cursor';mtReviewUI();}mtD();}
 // ---------- wiring ----------
-function mtApply(){mtHome(true);if(MT.sensor){MT.sensor=null;mq('v2Sensor').hidden=true;}mtLayout();mtAlarmUI();mtKeys();}
+function mtApply(){if(!mq("vista"))return;mtHome(true);if(MT.sensor){MT.sensor=null;mq('v2Sensor').hidden=true;}mtLayout();mtAlarmUI();mtKeys();}
 function mtWire(){
  mq('kSilent').onclick=mtAlarmPress;
  mq('kMenu').onclick=()=>{if(MT.sensor)mtSensorExit();if(MT.menu)mtHome();else{if(MT.review)mtHome(true);mtOpen();}};
@@ -497,4 +498,4 @@ function mtWire(){
  const esc=e=>{if(e.key==='Escape'&&(MT.menu||MT.review)){e.preventDefault();mtHome();}};mq('v2Menu').addEventListener('keydown',esc);mq('v2Rev').addEventListener('keydown',esc);
  addEventListener('pointerdown',mtUnlock,{capture:true,once:true});addEventListener('keydown',mtUnlock,{capture:true,once:true});
  setInterval(()=>{if(MT.sensor){mtSensorEval();mtMsgUI();mtSqiBars();}if(mtVis()){mtAlarmTick();mtMenuLive();mq('v2Usb').hidden=!(MT.usbUntil>Date.now());}},400);}
-mtWire();
+if(mq("vista"))mtWire(); // the workshop page has no Medtronic-style screen

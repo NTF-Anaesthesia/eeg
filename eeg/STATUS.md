@@ -22,6 +22,10 @@ gaps per skin are in `docs/skin-medtronic.md`, "The three monitor skins at a gla
 
 ## Recently done
 
+- Unbranded workshop page at eeg.anantf.com/workshop/ and ketamine and dexmedetomidine lines on the TCI pump (25 Nov 2026;
+  `docs/workshop.md`): a generic monitor (DSA with SEF95, real-time EEG, SQI/EMG/SR, masked index, unilateral or bilateral),
+  cases, quiz and pump with no device branding; ketamine (Domino) and dex (Hannivoort) bolus/load and infusions with Ce; new
+  `propdex` case. Clinical read-through of the doses, assumed ke0 values and the Ce-to-effect mapping: ask the owner.
 - Raw EEG strip at real time at any sim speed (25 Nov 2026; `docs/workshop.md`): cases at 5x no longer race the trace; the DSA,
   trends and index still run at 5x.
 - Workshop tools for a blinded DSA and SEF95 reading session (25 Nov 2026; `docs/workshop.md`; #4-#7): blinded mode
