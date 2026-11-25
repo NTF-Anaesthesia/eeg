@@ -59,6 +59,8 @@ try{
   assert.equal(await page.locator('#speedSeg [aria-pressed=true]').count(),1);
   await tap(page,'#speedSeg [data-speed="5"]');
   // Alpha dropout: runs the stimulus as an alpha dip; the key shows it running
+  // (off while awake: move the case into maintenance first)
+  await page.evaluate(()=>{tlRun(Math.max(0,story.t0+420-simT));dirty=true;});await page.waitForFunction(()=>!$('wsAlpha').disabled);
   await tap(page,'#wsAlpha');assert.ok(await page.evaluate(()=>eng.stT>0&&eng.stK==='alpha'),`${tag}: tap Alpha dropout`);
   assert.equal(await page.locator('#wsAlpha').getAttribute('aria-pressed'),'true');
   // Give ketamine: its Ce rises
